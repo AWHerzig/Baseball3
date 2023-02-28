@@ -1,3 +1,4 @@
+import numpy
 from Players import *
 from DirectoryWide import *
 import pandas
@@ -21,6 +22,8 @@ class Team:
         self.runsFor = 0
         self.runsAgainst = 0
         self.winDivision = False
+        self.seed = ''
+        self.prevWins = 0
 
     def baselineRosters(self):
         for i in hitterPos:  # Gives at least one player who's primary position is each pos
@@ -87,6 +90,42 @@ class Team:
 
     def __str__(self):
         return self.name
+
+    def reset(self):
+        FAs = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR'])
+        for i in self.hitters['Name']:
+            i.reset()
+            if i.contract <= 0:
+                FAs.loc[len(FAs)] = [i, i.pos, i.secondary, i.age, i.offense, i.overall]
+                self.hitters.drop(self.hitters[self.hitters['Name'] == i], inplace=True)
+        for i in self.rotation['Name']:
+            i.reset()
+            if i.contract <= 0:
+                FAs.loc[len(FAs)] = [i, i.pos, numpy.NaN, i.age, i.overall, i.total]
+                self.rotation.drop(self.rotation[self.rotation['Name'] == i], inplace=True)
+        for i in self.bullpen['Name']:
+            i.reset()
+            if i.contract <= 0:
+                FAs.loc[len(FAs)] = [i, i.pos, numpy.NaN, i.age, i.overall, i.total]
+                self.rotation.drop(self.rotation[self.rotation['Name'] == i], inplace=True)
+        self.played = 0
+        self.prevWins = self.wins
+        self.wins = 0
+        self.pWins = 0
+        self.runsFor = 0
+        self.runsAgainst = 0
+        self.winDivision = False
+        self.seed = ''
+        return FAs
+
+    def needCheck(self):  # [Needed Hitters, By position, Needed pitchers, [SP, RP]]
+        needs = [0, [None, None, 0, 0, 0, 0, 0, 0, 0], 0, 0]
+        needs[0] = 13 - len(self.hitters)
+        for i in range(2, 10):
+            needs[1][i] = clamp(2 - len(self.hitters[((self.hitters['Primary'] == posNotation[i]) | (self.hitters['Secondary'] == posNotation[i]))]), 0, 13)
+        needs[2] = 5 - len(self.rotation)
+        needs[3] = 8 - len(self.bullpen)
+        return needs
 
 
 class Lineup:  # Lineup card, gets called within the game

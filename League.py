@@ -3,8 +3,8 @@ from Team import *
 from DirectoryWide import *
 import numpy
 
-schedLength = '162'  # 0 is 20, 1 and '' is 52, 2 is 162
-playoffSize = '12'  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
+schedLength = '20'  # 0 is 20, 1 and '' is 52, 2 is 162
+playoffSize = 'DE'  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
 
 
 def test(hScore, pScore):  # Sims a bunch of innings and returns a stat like ERA or OPS (currently ERA)
@@ -241,7 +241,13 @@ for i in range(177):
 schedule20 = geoRivalsFinal + geoRivals2Final + divisionalSlates + leagueSlates
 
 
-def series(top, bot, l, pri=1):  # Top seed, bottom seed, games needed to win, print value
+def series(top, bot, l, pri=1, losers=False, wins=False):  # Top seed, bottom seed, games needed to win, print value
+    if wins:
+        if bot.wins > top.wins:  # We are going to flip em
+            hold = bot
+            bot = top
+            top = hold
+    print(top.seed, top, 'vs.', bot.seed, bot, 'best of', (l*2) - 1)
     top.pWins = 0
     bot.pWins = 0
     gameNum = 0
@@ -252,10 +258,16 @@ def series(top, bot, l, pri=1):  # Top seed, bottom seed, games needed to win, p
             game(bot, top, playoff=True, p=pri)
         print(top.ABR, top.pWins, bot.pWins, bot.ABR)
         gameNum += 1
-    if top.pWins == l:
-        return top
-    elif bot.pWins == l:
-        return bot
+    if not losers:
+        if top.pWins == l:
+            return top
+        elif bot.pWins == l:
+            return bot
+    else:
+        if top.pWins == l:
+            return [top, bot]
+        elif bot.pWins == l:
+            return [bot, top]
 
 
 def playIt(schedule):  # Plays the regular season
@@ -300,6 +312,8 @@ def playIt(schedule):  # Plays the regular season
         playoffs10(NLs, ALs, WSHost)
     elif playoffSize in ['', '2', '12']:
         playoffs12(NLs, ALs, WSHost)
+    elif playoffSize in ['DE', 'DE12']:
+        playoffsDP12(NLs, ALs)
     else:
         print('whoop')
 
@@ -313,6 +327,10 @@ def playoffs12(NLs, ALs, WSHost):  # New MLB playoff format, starting 2022
            NLwc.iloc[0]['Team'], NLwc.iloc[1]['Team'], NLwc.iloc[2]['Team']]
     ALplay = [ALdw.iloc[0]['Team'], ALdw.iloc[1]['Team'], ALdw.iloc[2]['Team'],
            ALwc.iloc[0]['Team'], ALwc.iloc[1]['Team'], ALwc.iloc[2]['Team']]
+    for i in NLplay:
+        i.seed = 'N'+str(NLplay.index(i) + 1)
+    for i in ALplay:
+        i.seed = 'A'+str(ALplay.index(i) + 1)
     print('NL Playoffs')
     bracket(NLplay)  # Prints a cute lil bracket to look at
     print('AL Playoffs')
@@ -356,6 +374,10 @@ def playoffs10(NLs, ALs, WSHost):  # MLB playoff 2012-2021 except Covid 2020
            NLwc.iloc[0]['Team'], NLwc.iloc[1]['Team']]
     ALplay = [ALdw.iloc[0]['Team'], ALdw.iloc[1]['Team'], ALdw.iloc[2]['Team'],
            ALwc.iloc[0]['Team'], ALwc.iloc[1]['Team']]
+    for i in NLplay:
+        i.seed = 'N'+str(NLplay.index(i) + 1)
+    for i in ALplay:
+        i.seed = 'A'+str(ALplay.index(i) + 1)
     print('NL Playoffs')
     bracket(NLplay)
     print('AL Playoffs')
@@ -397,6 +419,10 @@ def playoffs8(NLs, ALs, WSHost):  # MLB 1994-2011
            NLwc.iloc[0]['Team']]
     ALplay = [ALdw.iloc[0]['Team'], ALdw.iloc[1]['Team'], ALdw.iloc[2]['Team'],
            ALwc.iloc[0]['Team']]
+    for i in NLplay:
+        i.seed = 'N'+str(NLplay.index(i) + 1)
+    for i in ALplay:
+        i.seed = 'A'+str(ALplay.index(i) + 1)
     print('NL Playoffs')
     bracket(NLplay)
     print('AL Playoffs')
@@ -423,6 +449,55 @@ def playoffs8(NLs, ALs, WSHost):  # MLB 1994-2011
     else:
         WS = series(ALCS, NLCS, 4, pri=2)
     print(WS, 'wins the world series!!!')
+
+
+def playoffsDP12(NLs, ALs):  # No one ever has thought this was a good idea
+    NLdw = NLs.loc[NLs['D. Winner'] == True]
+    ALdw = ALs.loc[ALs['D. Winner'] == True]
+    NLwc = NLs.loc[NLs['D. Winner'] == False]
+    ALwc = ALs.loc[ALs['D. Winner'] == False]
+    NLplay = [NLdw.iloc[0]['Team'], NLdw.iloc[1]['Team'], NLdw.iloc[2]['Team'],
+              NLwc.iloc[0]['Team'], NLwc.iloc[1]['Team'], NLwc.iloc[2]['Team']]
+    ALplay = [ALdw.iloc[0]['Team'], ALdw.iloc[1]['Team'], ALdw.iloc[2]['Team'],
+              ALwc.iloc[0]['Team'], ALwc.iloc[1]['Team'], ALwc.iloc[2]['Team']]
+    for i in NLplay:
+        i.seed = 'N'+str(NLplay.index(i) + 1)
+    for i in ALplay:
+        i.seed = 'A'+str(ALplay.index(i) + 1)
+    bracket(NLplay+ALplay)
+    print('WINNERS QF')
+    G1 = series(NLplay[0], ALplay[3], 3, losers=True)
+    G2 = series(ALplay[1], NLplay[2], 3, losers=True)
+    G3 = series(ALplay[0], NLplay[3], 3, losers=True)
+    G4 = series(NLplay[1], ALplay[2], 3, losers=True)
+    print('LOSERS R1')
+    G5 = series(G1[1], NLplay[4], 2, losers=True)
+    G6 = series(G2[1], ALplay[5], 2, losers=True)
+    G7 = series(G3[1], ALplay[4], 2, losers=True)
+    G8 = series(G4[1], NLplay[5], 2, losers=True)
+    print('WINNERS SF')
+    G9 = series(G1[0], G2[0], 3, losers=True, wins=True)
+    G10 = series(G3[0], G4[0], 3, losers=True, wins=True)
+    print('LOSERS R2')
+    G11 = series(G5[0], G6[0], 2, losers=True, wins=True)
+    G12 = series(G7[0], G8[0], 2, losers=True, wins=True)
+    print('LOSERS R3')
+    G13 = series(G10[1], G11[0], 3, losers=True)
+    G14 = series(G9[1], G12[0], 3, losers=True)
+    print('WINNERS FINAL')
+    G15 = series(G9[0], G10[0], 4, losers=True, wins=True)
+    print('LOSERS SF')
+    G16 = series(G13[0], G14[0], 3, losers=True, wins=True)
+    print('LOSERS FINAL')
+    G17 = series(G15[1], G16[0], 4, losers=True)
+    print('WORLD SERIES')
+    G18 = series(G15[0], G17[0], 4, pri=2)
+    if G18 == G15[0]:
+        G19 = G18
+    else:
+        G19 = series(G17[0], G15[0], 4, pri=2)  # Losers winner gets home field in the bracket reset I think is fair
+    print(G19, 'WINS THE WORLD SERIES')
+
 
 
 def allstarGame(NLp, NLh, ALp, ALh, gp):  # I thought it would be fun
@@ -582,6 +657,50 @@ def bracket(teams):  # Derpy as hell but I like how it looks this way
         print(teams[2].ABR + '|    |')
         print('   |____|')
         print(teams[3].ABR + '|')
+    elif len(teams) == 12:
+        print('WINNERS BRACKET')
+        print(teams[0].ABR + '|')
+        print('   |____')
+        print(teams[9].ABR + '|    |')
+        print('        |____')
+        print(teams[7].ABR + '|    |    |')
+        print('   |____|    |')
+        print(teams[2].ABR + '|         |')
+        print('             |___')
+        print(teams[6].ABR + '|         |')
+        print('   |____     |')
+        print(teams[3].ABR + '|    |    |')
+        print('        |____|')
+        print(teams[1].ABR + '|    |')
+        print('   |____|')
+        print(teams[8].ABR + '|')
+        print('LOSERS BRACKET')
+        print('___|')
+        print('   |____')
+        print(teams[4].ABR + '|')
+        print()
+        print('___|')
+        print('   |____')
+        print(teams[11].ABR + '|')
+        print()
+        print('___|')
+        print('   |____')
+        print(teams[10].ABR + '|')
+        print()
+        print('___|')
+        print('   |____')
+        print(teams[5].ABR + '|')
+
+
+def offseason():
+    freeAgents = pandas.DataFrame(columns=['Name', 'Pos1', 'pos2', 'Age', 'Core', 'OVR'])
+    for i in NLt+ALt:
+        teamFAs = i.reset()
+        freeAgents = pandas.concat([freeAgents, teamFAs])
+    print(freeAgents)
+    for i in NLt+ALt:
+        print(i.ABR, *i.needCheck())
+
 
 
 
