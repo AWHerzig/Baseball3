@@ -144,13 +144,37 @@ def game(home, away, playoff=False, p=0, stam=SPstam):  # p is a print value tha
         away.runsAgainst += hF
         if hF > aF:
             home.wins += 1
+            if home.streak < 0:
+                home.streak = 1
+            else:
+                home.streak += 1
+            if away.streak > 0:
+                away.streak = -1
+            else:
+                away.streak -= 1
         else:
             away.wins += 1
+            if away.streak < 0:
+                away.streak = 1
+            else:
+                away.streak += 1
+            if home.streak > 0:
+                home.streak = -1
+            else:
+                home.streak -= 1
     else:
         if hF > aF:
             home.pWins += 1
         else:
             away.pWins += 1
+    if home.streak >= 10:
+        print(home, home.record(), 'has won', home.streak, 'games in a row!')
+    elif home.streak <= -10:
+        print(home, home.record(), 'has lost', -1 * home.streak, 'games in a row!')
+    if away.streak >= 10:
+        print(away, away.record(), 'has won', away.streak, 'games in a row!')
+    elif away.streak <= -10:
+        print(away, away.record(), 'has lost', -1 * away.streak, 'games in a row!')
 
 
 def inning(oTeam, dTeam, board, p, wOff=10000):  # Yes technically innings have a mercy cap of 10000

@@ -7,13 +7,13 @@ hitterHand = [-1, -1, -1, 1, 1]  # 60% of hitters are righties
 pitcherHand = [-1, -1, -1, 1]  # 75% of pitchers are righties
 
 
-class Team:
+class Team: 
     def __init__(self, name, ABR):
         self.name = name
         self.ABR = ABR
         self.hitters = pandas.DataFrame(columns=['Name', 'Primary', 'Secondary', 'Overall', 'Offense', 'Fielding', 'Speed', 'Available'])
-        self.rotation = pandas.DataFrame(columns=['Name', 'Hand', 'Arsenal', 'Overall', 'Release', 'Extension', 'Available'])
-        self.bullpen = pandas.DataFrame(columns=['Name', 'Hand', 'Arsenal', 'Overall', 'Release', 'Extension', 'Available'])
+        self.rotation = pandas.DataFrame(columns=['Name', 'Hand', 'Arsenal', 'Core', 'Release', 'Extension', 'Available'])
+        self.bullpen = pandas.DataFrame(columns=['Name', 'Hand', 'Arsenal', 'Core', 'Release', 'Extension', 'Available'])
         self.baselineRosters()  # Gives initial players
         self.lineupCard = Lineup(self.rotation, self.hitters, self.ABR)
         self.played = 0
@@ -24,10 +24,19 @@ class Team:
         self.winDivision = False
         self.seed = ''
         self.prevWins = 0
+        self.needs = []
+        self.prospects = None
+        self.values = [0]*8
+        for i in range(7):
+            self.values[i] = random.randrange(1, 4)
+        self.values[7] = random.randrange(1, 3)
+        self.budget = round(numpy.random.normal(500, 100))
+        self.streak = 0
 
     def baselineRosters(self):
         for i in hitterPos:  # Gives at least one player who's primary position is each pos
-            cur = Hitter(nameGen(), i, random.choice(hitterHand))
+            cur = Hitter(nameGen(), i, hand=random.choice(hitterHand), top=8)
+            cur.boost(ageCurve(cur.age, base=True))
             if i in infieldPos:
                 second = random.choice(infieldPos)  # Infielders get infield secondary positions
             else:
@@ -35,7 +44,8 @@ class Team:
             cur.secondary = second
             self.hitters.loc[len(self.hitters)] = [cur, cur.pos, cur.secondary, cur.overall, cur.offense, cur.field, cur.speed, cur.available]
         for i in range(5):  # Round out to 13 hitters, I use a 26-man roster
-            cur = Hitter(nameGen(), random.choice(hitterPos), random.choice(hitterHand))
+            cur = Hitter(nameGen(), random.choice(hitterPos), hand=random.choice(hitterHand), top=8)
+            cur.boost(ageCurve(cur.age, base=True))
             if i == 0:  # At least one more catcher
                 cur.pos = 'C '
             if cur.pos in infieldPos:
@@ -45,14 +55,16 @@ class Team:
             cur.secondary = second
             self.hitters.loc[len(self.hitters)] = [cur, cur.pos, cur.secondary, cur.overall, cur.offense, cur.field, cur.speed, cur.available]
         for i in range(5):  # Starting pitchers
-            cur = Pitcher(nameGen(), 'SP', random.choice(pitcherHand))
+            cur = Pitcher(nameGen(), 'SP', hand=random.choice(pitcherHand), top=8)
+            cur.boost(ageCurve(cur.age, base=True))
             self.rotation.loc[len(self.rotation)] = [cur, cur.hand, cur.arsenal, cur.overall, cur.release, cur.extension, cur.available]
         for i in range(8):  # Bullpen, again 13 total pitchers
-            cur = Pitcher(nameGen(), 'RP', random.choice(pitcherHand))
+            cur = Pitcher(nameGen(), 'RP', hand=random.choice(pitcherHand), top=8)
+            cur.boost(ageCurve(cur.age, base=True))
             self.bullpen.loc[len(self.bullpen)] = [cur, cur.hand, cur.arsenal, cur.overall, cur.release, cur.extension, cur.available]
         self.hitters.sort_values(['Overall', 'Offense'], inplace=True, ascending=False)
-        self.rotation.sort_values(['Overall', 'Extension'], inplace=True, ascending=False)
-        self.bullpen.sort_values(['Overall', 'Extension'], inplace=True, ascending=False)
+        self.rotation.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
+        self.bullpen.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
         """
         self.hitters.set_index('Name', inplace=True)
         self.rotation.set_index('Name', inplace=True)
@@ -91,23 +103,32 @@ class Team:
     def __str__(self):
         return self.name
 
+    def record(self):
+        return '('+str(self.wins)+'-'+str(self.played-self.wins)+')'
+
     def reset(self):
-        FAs = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR'])
+        FAs = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
         for i in self.hitters['Name']:
             i.reset()
-            if i.contract <= 0:
-                FAs.loc[len(FAs)] = [i, i.pos, i.secondary, i.age, i.offense, i.overall]
-                self.hitters.drop(self.hitters[self.hitters['Name'] == i], inplace=True)
+            if i.contract[0] <= 0:
+                i.team = None
+                FAs.loc[len(FAs)] = [i, i.pos, i.secondary, i.age, i.offense, i.overall, 0]
+                self.hitters.drop(self.hitters[self.hitters['Name'] == i].index, inplace=True)
         for i in self.rotation['Name']:
             i.reset()
-            if i.contract <= 0:
-                FAs.loc[len(FAs)] = [i, i.pos, numpy.NaN, i.age, i.overall, i.total]
-                self.rotation.drop(self.rotation[self.rotation['Name'] == i], inplace=True)
+            if i.contract[0] <= 0:
+                i.team = None
+                FAs.loc[len(FAs)] = [i, i.pos, numpy.NaN, i.age, i.overall, i.total, 0]
+                self.rotation.drop(self.rotation[self.rotation['Name'] == i].index, inplace=True)
         for i in self.bullpen['Name']:
             i.reset()
-            if i.contract <= 0:
-                FAs.loc[len(FAs)] = [i, i.pos, numpy.NaN, i.age, i.overall, i.total]
-                self.rotation.drop(self.rotation[self.rotation['Name'] == i], inplace=True)
+            if i.contract[0] <= 0:
+                i.team = None
+                FAs.loc[len(FAs)] = [i, i.pos, numpy.NaN, i.age, i.overall, i.total, 0]
+                self.bullpen.drop(self.bullpen[self.bullpen['Name'] == i].index, inplace=True)
+        self.hitters.reset_index(drop=True, inplace=True)
+        self.rotation.reset_index(drop=True, inplace=True)
+        self.bullpen.reset_index(drop=True, inplace=True)
         self.played = 0
         self.prevWins = self.wins
         self.wins = 0
@@ -119,13 +140,218 @@ class Team:
         return FAs
 
     def needCheck(self):  # [Needed Hitters, By position, Needed pitchers, [SP, RP]]
-        needs = [0, [None, None, 0, 0, 0, 0, 0, 0, 0], 0, 0]
+        needs = [0, [None, None, 0, 0, 0, 0, 0, 0, 0, 0], 0, 0]
         needs[0] = 13 - len(self.hitters)
         for i in range(2, 10):
             needs[1][i] = clamp(2 - len(self.hitters[((self.hitters['Primary'] == posNotation[i]) | (self.hitters['Secondary'] == posNotation[i]))]), 0, 13)
         needs[2] = 5 - len(self.rotation)
         needs[3] = 8 - len(self.bullpen)
-        return needs
+        self.needs = needs
+
+    def prospectsAvailable(self):
+        self.prospects = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
+        inf = Hitter(nameGen(), random.choice(infieldPos), hand=random.choice(hitterHand), top=8)
+        inf.age = 1
+        inf.secondary = random.choice(infieldPos)
+        self.prospects.loc[0] = [inf, inf.pos, inf.secondary, 1, inf.offense, inf.overall, 0]
+        out = Hitter(nameGen(), random.choice(outfieldPos), hand=random.choice(hitterHand), top=8)
+        out.age = 1
+        out.secondary = random.choice(outfieldPos)
+        self.prospects.loc[1] = [out, out.pos, out.secondary, 1, out.offense, out.overall, 0]
+        sp = Pitcher(nameGen(), 'SP', hand=random.choice(pitcherHand), top=8)
+        sp.age = 1
+        self.prospects.loc[2] = [sp, 'SP', numpy.nan, 1, sp.overall, sp.total, 0]
+        rp = Pitcher(nameGen(), 'RP', hand=random.choice(pitcherHand), top=8)
+        rp.age = 1
+        self.prospects.loc[3] = [rp, 'RP', numpy.nan, 1, rp.overall, rp.total, 0]
+
+    def contractBundle(self, fa, roundNum, year, p):
+        if year == 1:
+            remBudget = self.budget / 2
+        elif year == 2:
+            remBudget = self.budget * .75
+        else:
+            remBudget = self.budget
+        for i in self.hitters['Name']:
+            remBudget -= i.contract[1]
+        for i in self.rotation['Name']:
+            remBudget -= i.contract[1]
+        for i in self.bullpen['Name']:
+            remBudget -= i.contract[1]
+        remBudget = round(remBudget, 1)
+        if p > 1:
+            print(remBudget)
+        avHitters = pandas.concat([fa[~fa['Pos2'].isnull()], self.prospects[~self.prospects['Pos2'].isnull()]])
+        for i in avHitters['Name']:
+            i.value = self.setValue(i, roundNum)
+            i.cost = i.value if i.age > 1 else 2
+        avHitters['Value'] = [i.value for i in avHitters['Name']]
+        avHitters['Cost'] = [i.cost for i in avHitters['Name']]
+        avSPs = pandas.concat([fa[fa['Pos1'] == 'SP'], self.prospects[self.prospects['Pos1'] == 'SP']])
+        for i in avSPs['Name']:
+            i.value = self.setValue(i, roundNum)
+            i.cost = i.value if i.age > 1 else 2
+        avSPs['Value'] = [i.value for i in avSPs['Name']]
+        avSPs['Cost'] = [i.cost for i in avSPs['Name']]
+        avRPs = pandas.concat([fa[fa['Pos1'] == 'RP'], self.prospects[self.prospects['Pos1'] == 'RP']])
+        for i in avRPs['Name']:
+            i.value = self.setValue(i, roundNum)
+            i.cost = i.value if i.age > 1 else 2
+        avRPs['Value'] = [i.value for i in avRPs['Name']]
+        avRPs['Cost'] = [i.cost for i in avRPs['Name']]
+        avHitters.sort_values(['Value', 'OVR'], inplace=True, ascending=False)
+        avSPs.sort_values(['Value', 'OVR'], inplace=True, ascending=False)
+        avRPs.sort_values(['Value', 'OVR'], inplace=True, ascending=False)
+        # print(avHitters.head())
+        # print(avSPs.head())
+        # print(avRPs.head())
+        hBundles = [None]*35
+        for j in range(35):
+            go = True
+            tries = 1
+            while go and tries < 250:
+                val = 0
+                cost = 0
+                halfCost = 0
+                try:
+                    cur = random.sample(list(avHitters['Name']), self.needs[0])
+                    toGo = self.needs[1].copy()
+                    for i in cur:
+                        toGo[posNotation.index(i.pos)] -= 1
+                        toGo[posNotation.index(i.secondary)] -= 1
+                        val += i.value
+                        cost += i.cost
+                        halfCost += max(round(i.cost / 2, 1), 2)
+                    go = False
+                    for i in toGo[2:]:
+                        if i > 0:
+                            go = True
+                    tries += 1
+                except ValueError:
+                    cur = list(avHitters['Name'])
+                    while len(cur) < self.needs[0]:
+                        dum = Hitter(nameGen(), '1B', hand=1, top=1)
+                        (dum.age, dum.secondary, dum.value, dum.cost) = (0, '1B', 0, 2)
+                        cur = cur + [dum]
+                    for i in cur:
+                        val += i.value
+                        cost += i.cost
+                        halfCost += max(round(i.cost / 2, 1), 2)
+            if tries > 250 and roundNum > 2:
+                val = 0
+                cost = 0
+                halfCost = 0
+                try:
+                    cur = random.sample(list(avHitters['Name']), self.needs[0])
+                    for i in cur:
+                        val += i.value
+                        cost += i.cost
+                        halfCost += max(round(i.cost/2, 1), 2)
+                except ValueError:
+                    cur = list(avHitters['Name'])
+                    while len(cur) < self.needs[0]:
+                        dum = Hitter(nameGen(), '1B', hand=1, top=1)
+                        (dum.age, dum.secondary, dum.value, dum.cost) = (0, '1B', 0, 2)
+                        self.prospects.loc[len(self.prospects)] = [dum, dum.pos, dum.secondary, 1, dum.offense, dum.overall, 0]
+                        cur = cur + [dum]
+                    for i in cur:
+                        val += i.value
+                        cost += i.cost
+                        halfCost += max(round(i.cost / 2, 1), 2)
+            elif tries > 250:
+                cur = ([None]*self.needs[0]) + [0, math.inf, math.inf]
+            hBundles[j] = cur + [val, cost, halfCost]
+        spBundles = [None] * 25
+        for j in range(25):
+            val = 0
+            cost = 0
+            halfCost = 0
+            try:
+                cur = random.sample(list(avSPs['Name']), self.needs[2])
+                for i in cur:
+                    val += i.value
+                    cost += i.cost
+                    halfCost += max(round(i.cost/2, 1), 2)
+            except ValueError:
+                cur = list(avSPs['Name'])
+                while len(cur) < self.needs[2]:
+                    dum = Pitcher(nameGen(), 'SP', hand=1, top=1)
+                    (dum.age, dum.value, dum.cost) = (0, 0, 2)
+                    self.prospects.loc[len(self.prospects)] = [dum, 'SP', numpy.nan, 1, dum.overall, dum.total, 0]
+                    cur = cur + [dum]
+                for i in cur:
+                    val += i.value
+                    cost += i.cost
+                    halfCost += max(round(i.cost / 2, 1), 2)
+            spBundles[j] = cur + [val, cost, halfCost]
+        rpBundles = [None] * 30
+        for j in range(30):
+            val = 0
+            cost = 0
+            halfCost = 0
+            try:
+                cur = random.sample(list(avRPs['Name']), self.needs[3])
+                for i in cur:
+                    val += i.value
+                    cost += i.cost
+                    halfCost += max(round(i.cost / 2, 1), 2)
+            except ValueError:
+                cur = list(avRPs['Name'])
+                while len(cur) < self.needs[3]:
+                    dum = Pitcher(nameGen(), 'RP', hand=1, top=1)
+                    (dum.age, dum.value, dum.cost) = (0, 0, 2)
+                    cur = cur + [dum]
+                for i in cur:
+                    val += i.value
+                    cost += i.cost
+                    halfCost += max(round(i.cost / 2, 1), 2)
+            rpBundles[j] = cur + [val, cost, halfCost]
+        offers = []
+        halfOffers = []
+        bestValue = 0
+        halfValue = 0
+        for i in hBundles:
+            for j in spBundles:
+                for k in rpBundles:
+                    if i[-2]+j[-2]+k[-2] <= remBudget:
+                        val = i[-3]+j[-3]+k[-3]
+                        if val>bestValue:
+                            bestValue = val
+                            offers = i[:-3] + j[:-3] + k[:-3]
+                    if i[-1]+j[-1]+k[-1] <= remBudget:
+                        val = i[-3]+j[-3]+k[-3]
+                        if val > halfValue:
+                            halfValue = val
+                            halfOffers = i[:-3] + j[:-3] + k[:-3]
+        for i in offers:
+            conLen = 3 if i.age == 1 else random.randrange(1, 5)
+            i.offers.append([self, conLen, i.cost])
+            if isinstance(i, Hitter) and p > 1:
+                print(self.name, 'offer a', conLen, 'year,', i.cost, 'AAV contract to', i.pos+'/'+i.secondary, i.smallLine())
+            elif p > 1:
+                print(self.name, 'offer a', conLen, 'year,', i.cost, 'AAV contract to', i.pos, i.smallLine())
+        if len(offers) == 0 and len(halfOffers) > 0:
+            if p > 1:
+                print('Half offers')
+            for i in halfOffers:
+                conLen = 3 if i.age == 1 else random.randrange(1, 5)
+                halfCostCur = max(round(i.cost / 2, 1), 2)
+                i.offers.append([self, conLen, halfCostCur])
+                if isinstance(i, Hitter) and p > 1:
+                    print(self.name, 'offer a', conLen, 'year,', halfCostCur, 'AAV contract to', i.pos + '/' + i.secondary,
+                          i.smallLine())
+                elif p > 1:
+                    print(self.name, 'offer a', conLen, 'year,', halfCostCur, 'AAV contract to', i.pos, i.smallLine())
+
+    def setValue(self, player, roundNum):
+        if isinstance(player, Hitter):
+            return round(((self.values[0]*player.con) + (self.values[1]*player.pow) + (self.values[2]*player.vis) +
+                    (self.values[3]*.5*(player.field+player.speed))) * (.9**roundNum), 1)
+        elif isinstance(player, Pitcher):
+            return round(((self.values[4] * player.cont) + (self.values[5] * player.velo) + (self.values[6] * player.move) +
+                    (self.values[7] * .5 * (player.field + player.speed))) * (.9**roundNum), 1)
+        else:
+            print('no')
 
 
 class Lineup:  # Lineup card, gets called within the game
@@ -189,6 +415,7 @@ class ASTeam:  # This felt like hacking my own code to make a game play with fak
         self.wins = 0
         self.runsFor = 0
         self.runsAgainst = 0
+        self.streak = 0
 
     def setLineup(self):
         pass

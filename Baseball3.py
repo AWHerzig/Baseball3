@@ -5,7 +5,7 @@
 # Base Strike Zone will be 1.5 ft to 3.5 ft, but maybe will change off of batter height
 # 60.5 ft from rubber to plate
 
-from inputimeout import inputimeout
+
 from matplotlib import pyplot as plt
 import random
 import numpy
@@ -45,11 +45,31 @@ def bigtest2(p=5):  # Each level of hitter plays specific level of pitcher and r
 #bigtest()
 
 
-if schedLength in ['', '52', '1']:  # This is the kickoff for the whole thing
-    playIt(schedule52)
-elif schedLength in ['0', '20']:
-    playIt(schedule20)
-elif schedLength in ['2', '162']:
-    playIt(schedule162)
-else:
-    print('whoopsie')
+print('Values Key: [Contact, Power, Vision, Hitter Field/Speed, Control, Velocity, Movement, Pitcher FIeld/Speed]')
+for j in Divisions:
+    for i in j:
+        print(i.name, 'values', i.values, 'with a budget of', i.budget)
+    print()
+year = 1
+print('Loading rosters... (Ignore any warning lines)')
+while year <= 5:
+    print(str(20*(year-1))+'%')
+    cur = offseason(year, 0)
+    year += 1
+print('100%')
+go = 'True'
+while go:
+    if schedLength in ['2', '162']:  # This is the kickoff for the whole thing
+        playIt(schedule162)
+    elif schedLength in ['0', '20']:
+        playIt(schedule20)
+    else:
+        playIt(schedule52)
+    offseason(year, 1)
+    year += 1
+    go = input('Input anything to play another season, just hit enter to stop')
+print('Thanks for playing :)')
+
+
+
+

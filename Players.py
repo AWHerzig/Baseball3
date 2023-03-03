@@ -2,9 +2,11 @@ from DirectoryWide import *
 import numpy
 import random
 
+# Values contract as length * (AAV**2)?  [2, 10] = 200, [1, 15] = 225
+
 
 class Pitcher:
-    def __init__(self, name, pos, hand=-1, controlled=False):
+    def __init__(self, name, pos, hand=-1, top=11, controlled=False):
         self.name = name
         while len(self.name) > 15:  # To make statlines line up better, all names are same length
             self.name = nameGen()
@@ -12,11 +14,11 @@ class Pitcher:
             self.name = self.name + ' '
         self.pos = pos
         self.team = None
-        self.cont = random.randrange(0, 11)
-        self.velo = random.randrange(0, 11)
-        self.move = random.randrange(0, 11)
-        self.field = random.randrange(0, 11)
-        self.speed = random.randrange(0, 11)
+        self.cont = random.randrange(0, top)
+        self.velo = random.randrange(0, top)
+        self.move = random.randrange(0, top)
+        self.field = random.randrange(0, top)
+        self.speed = random.randrange(0, top)
         self.overall = self.cont + self.velo + self.move
         self.total = self.overall + self.field + self.speed
         self.arsenal = random.sample(list(pitches.keys()), k=3)  # They get 3 pitches for now it might change
@@ -26,9 +28,12 @@ class Pitcher:
         self.available = True
         self.stamScore = 0
         self.usage = 0  # Consecutive games played
-        self.age = random.randrange(1, 5)
-        self.contract = [4-self.age if self.age < 4 else 6-age, 10]
+        self.age = random.randrange(1, 4)
+        self.contract = [4-self.age, 2]
         self.controlled = controlled
+        self.value = 0
+        self.cost = 0
+        self.offers = []
         # Stats
         self.OR = 0
         self.BF = 0
@@ -55,12 +60,13 @@ class Pitcher:
             self.Kp = round(self.K / self.BF, 3)
 
     def smallLine(self):
-        return self.name + '(' + str(self.cont) + ',' + str(self.velo) + ',' + str(self.move) + ';' + str(round(self.ERA, 2)) + ')'
+        return self.name + '(' + str(self.age) + ';' + str(self.cont) + ',' + str(self.velo) + ',' + str(self.move) + ';' + str(round(self.ERA, 2)) + ')'
 
     def canGetThere(self, dist, time):
         return dist < (20 + self.speed) * (time-1.5 + (.1*self.field)) + (self.field / 2)
 
     def reset(self):  # Year to year reset
+        self.available = True
         self.usage = 0
         self.OR = 0
         self.BF = 0
@@ -73,10 +79,41 @@ class Pitcher:
         self.ERA = 0
         self.WHIP = 0
         self.Kp = 0
+        self.age += 1
+        self.boost(ageCurve(self.age))
+        self.contract[0] -= 1
+        self.offers = []
+
+    def boost(self, x):
+        self.cont += x
+        self.velo += x
+        self.move += x
+        self.field += x
+        self.speed += x
+        self.overall = self.cont + self.velo + self.move
+        self.total = self.overall + self.field + self.speed
+
+    def acceptDeal(self):
+        bestOffer = None
+        bestValue = 0
+        for i in self.offers:
+            if i[1]*(i[2]**2) > bestValue:
+                bestValue = i[1]*(i[2]**2)
+                bestOffer = i
+        if bestOffer is not None and self.pos == 'SP':
+            bestOffer[0].rotation.loc[len(bestOffer[0].rotation)] = numpy.array([self, self.hand, self.arsenal, self.overall,
+                                                                     self.release, self.extension, self.available], dtype=object)
+            self.contract = bestOffer[1:3]
+        elif bestOffer is not None and self.pos == 'RP':
+            bestOffer[0].bullpen.loc[len(bestOffer[0].bullpen)] = numpy.array([self, self.hand, self.arsenal, self.overall,
+                                                                   self.release, self.extension, self.available], dtype=object)
+            self.contract = bestOffer[1:3]
+            self.team = bestOffer[0]
+        return bestOffer
 
 
 class Hitter:
-    def __init__(self, name, pos,  hand=-1, controlled=False):
+    def __init__(self, name, pos, hand=-1, top=11, controlled=False):
         self.name = name
         while len(self.name) > 15:  # To make statlines line up better, all names are same length
             self.name = nameGen()
@@ -84,12 +121,12 @@ class Hitter:
             self.name = self.name + ' '
         self.team = None
         self.pos = pos
-        self.con = random.randrange(0, 11)
-        self.pow = random.randrange(0, 11)
-        self.vis = random.randrange(0, 11)
+        self.con = random.randrange(0, top)
+        self.pow = random.randrange(0, top)
+        self.vis = random.randrange(0, top)
         self.offense = self.con + self.pow + self.vis
-        self.field = random.randrange(0, 11)
-        self.speed = random.randrange(0, 11)
+        self.field = random.randrange(0, top)
+        self.speed = random.randrange(0, top)
         self.overall = self.offense + self.field + self.speed
         self.hand = hand
         self.secondary = None
@@ -97,9 +134,12 @@ class Hitter:
         self.available = True
         self.usage = 0  # Consecutive games played
         self.chargedTo = None
-        self.age = random.randrange(1, 5)
-        self.contract = [4 - self.age if self.age < 4 else 6 - age, 10]
+        self.age = random.randrange(1, 4)
+        self.contract = [4 - self.age, 2]
         self.controlled = controlled
+        self.value = 0
+        self.cost = 0
+        self.offers = []
         # Stats
         self.PA = 0
         self.H = 0
@@ -139,7 +179,7 @@ class Hitter:
         self.slash = str(self.AVG) + '/' + str(self.OBP) + '/' + str(self.SLG)
 
     def smallLine(self):
-        return self.name + '(' + str(self.vis) + ',' + str(self.con) + ',' + str(self.pow) + ';' + str(round(self.OPS, 2)) + ')'
+        return self.name + '(' + str(self.age) + ';' + str(self.vis) + ',' + str(self.con) + ',' + str(self.pow) + ';' + str(round(self.OPS, 2)) + ')'
 
     def canGetThere(self, dist, time):
         if self.outOfPos:
@@ -168,5 +208,31 @@ class Hitter:
         self.zMissA = 0
         self.slash = ''
         self.usage = 0
+        self.available = True
         self.age += 1
-        self.contract -= 1
+        self.boost(ageCurve(self.age))
+        self.contract[0] -= 1
+        self.offers = []
+
+    def boost(self, x):
+        self.con += x
+        self.pow += x
+        self.vis += x
+        self.field += x
+        self.speed += x
+        self.offense = self.con + self.pow + self.vis
+        self.overall = self.offense + self.field + self.speed
+
+    def acceptDeal(self):
+        bestOffer = None
+        bestValue = 0
+        for i in self.offers:
+            if i[1]*(i[2]**2) > bestValue:
+                bestValue = i[1]*(i[2]**2)
+                bestOffer = i
+        if bestOffer is not None:
+            bestOffer[0].hitters.loc[len(bestOffer[0].hitters)] = numpy.array([self, self.pos, self.secondary, self.overall,
+                                                                   self.offense, self.field, self.speed, self.available], dtype=object)
+            self.contract = bestOffer[1:3]
+            self.team = bestOffer[0]
+        return bestOffer

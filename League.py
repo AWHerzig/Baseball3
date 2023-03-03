@@ -3,8 +3,8 @@ from Team import *
 from DirectoryWide import *
 import numpy
 
-schedLength = '20'  # 0 is 20, 1 and '' is 52, 2 is 162
-playoffSize = 'DE'  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
+schedLength = input('How many games per season would you like? (20, 52, 162)')  # 0 is 20, 1 and '' is 52, 2 is 162
+playoffSize = input('What playoff format would you like? (8, 10, 12, DE)')  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
 
 
 def test(hScore, pScore):  # Sims a bunch of innings and returns a stat like ERA or OPS (currently ERA)
@@ -91,6 +91,7 @@ def test2(hScore, pScore):  # Sims a bunch of PAs and returns breakdown of resul
 seriesHome = [None, [0], [0, 0, 0], [0, 0, 1, 1, 0], [0, 0, 1, 1, 1, 0, 0]]
 # First index is series length (in wins needed), second index: 0 means better seed hosts game, 1 means worse seed
 
+print('Building the teams')
 NLEt = [Team('Washington Nationals ', 'WSN'), Team('New York Mets        ', 'NYM'),
         Team('Atlanta Braves       ', 'ATL'), Team('Miami Marlins        ', 'MIA'),
         Team('Philadelphia Phillies', 'PHI')]  # Teams
@@ -247,7 +248,7 @@ def series(top, bot, l, pri=1, losers=False, wins=False):  # Top seed, bottom se
             hold = bot
             bot = top
             top = hold
-    print(top.seed, top, 'vs.', bot.seed, bot, 'best of', (l*2) - 1)
+    print(top.seed, top, top.record(), 'vs.', bot.seed, bot, bot.record(), 'best of', (l*2) - 1)
     top.pWins = 0
     bot.pWins = 0
     gameNum = 0
@@ -278,8 +279,9 @@ def playIt(schedule):  # Plays the regular season
                 k['Played'] = [j.played for j in k['Team']]
                 k['Wins'] = [j.wins for j in k['Team']]
                 k['Losses'] = k['Played'] - k['Wins']
+                k['WPCT'] = int(1000*(k['Wins']/k['Played']))
                 k['Run D'] = [(j.runsFor - j.runsAgainst) for j in k['Team']]
-                k.sort_values(['Wins', 'Run D'], inplace=True, ascending=False)  # irl tiebreak is H2H
+                k.sort_values(['WPCT', 'Run D'], inplace=True, ascending=False)  # irl tiebreak is H2H
                 print(k)
             print('ALL-STAR BREAK')
             WSHost = allstarGame(NLp, NLh, ALp, ALh, int(schedLength)//2)  # Winner of the ASG gets top seed in WS
@@ -293,16 +295,17 @@ def playIt(schedule):  # Plays the regular season
         i['Played'] = [j.played for j in i['Team']]
         i['Wins'] = [j.wins for j in i['Team']]
         i['Losses'] = i['Played'] - i['Wins']
+        i['WPCT'] = int(1000 * (i['Wins'] / i['Played']))
         i['Run D'] = [(j.runsFor - j.runsAgainst) for j in i['Team']]
         i.sort_values(['Wins', 'Run D'], inplace=True, ascending=False)
         i.iloc[0]['Team'].winDivision = True  # Secures playoff spot
         print(i)
     NLs = pandas.concat([NLEs, NLCs, NLWs])
     NLs['D. Winner'] = [j.winDivision for j in NLs['Team']]
-    NLs.sort_values(['Wins', 'Run D'], inplace=True, ascending=False)
+    NLs.sort_values(['WPCT', 'Run D'], inplace=True, ascending=False)
     ALs = pandas.concat([ALEs, ALCs, ALWs])
     ALs['D. Winner'] = [j.winDivision for j in ALs['Team']]
-    ALs.sort_values(['Wins', 'Run D'], inplace=True, ascending=False)
+    ALs.sort_values(['WPCT', 'Run D'], inplace=True, ascending=False)
     print('LEAGUE STANDINGS')
     print(NLs)
     print(ALs)
@@ -310,12 +313,10 @@ def playIt(schedule):  # Plays the regular season
         playoffs8(NLs, ALs, WSHost)
     elif playoffSize in ['1', '10']:
         playoffs10(NLs, ALs, WSHost)
-    elif playoffSize in ['', '2', '12']:
-        playoffs12(NLs, ALs, WSHost)
     elif playoffSize in ['DE', 'DE12']:
         playoffsDP12(NLs, ALs)
     else:
-        print('whoop')
+        playoffs12(NLs, ALs, WSHost)
 
 
 def playoffs12(NLs, ALs, WSHost):  # New MLB playoff format, starting 2022
@@ -491,11 +492,11 @@ def playoffsDP12(NLs, ALs):  # No one ever has thought this was a good idea
     print('LOSERS FINAL')
     G17 = series(G15[1], G16[0], 4, losers=True)
     print('WORLD SERIES')
-    G18 = series(G15[0], G17[0], 4, pri=2)
+    G18 = series(G15[0], G17[0], 4)
     if G18 == G15[0]:
         G19 = G18
     else:
-        G19 = series(G17[0], G15[0], 4, pri=2)  # Losers winner gets home field in the bracket reset I think is fair
+        G19 = series(G17[0], G15[0], 4)  # Losers winner gets home field in the bracket reset I think is fair
     print(G19, 'WINS THE WORLD SERIES')
 
 
@@ -692,14 +693,59 @@ def bracket(teams):  # Derpy as hell but I like how it looks this way
         print(teams[5].ABR + '|')
 
 
-def offseason():
-    freeAgents = pandas.DataFrame(columns=['Name', 'Pos1', 'pos2', 'Age', 'Core', 'OVR'])
+def offseason(year, p):
+    freeAgents = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
+    pDeals = 0
     for i in NLt+ALt:
         teamFAs = i.reset()
-        freeAgents = pandas.concat([freeAgents, teamFAs])
-    print(freeAgents)
-    for i in NLt+ALt:
-        print(i.ABR, *i.needCheck())
+        freeAgents = pandas.concat([freeAgents, teamFAs], ignore_index=True)
+        i.prospectsAvailable()
+    go = True
+    roundNum = 0
+    while go:
+        if p > 0:
+            print('ROUND', roundNum+1)
+        go = False
+        for i in NLt+ALt:
+            i.needCheck()
+            if i.needs[0] > 0 or i.needs[2] > 0 or i.needs[3] > 0:
+                go = True
+                if p > 1:
+                    print(i.ABR, *i.needs)
+                i.contractBundle(freeAgents, roundNum, year, p)
+        if p > 0:
+            print('Prospect Deals')
+        for i in NLt + ALt:
+            for j in i.prospects['Name']:
+                sign = j.acceptDeal()
+                if sign is not None:
+                    pDeals += 1
+                    if isinstance(j, Hitter) and p > 0:
+                        print(j.pos + '/' + j.secondary, j.smallLine(), 'signs with', sign[0], 'for', sign[1], 'years',
+                              sign[2], 'AAV')
+                    elif p > 0:
+                        print(j.pos+'   ', j.smallLine(), 'signs with', sign[0], 'for', sign[1], 'years', sign[2], 'AAV')
+                    i.prospects.drop(i.prospects[i.prospects['Name'] == j].index, inplace=True)
+                    i.prospects.reset_index(drop=True, inplace=True)
+        if p > 0:
+            print('FA Deals')
+        for i in freeAgents['Name']:
+            sign = i.acceptDeal()
+            if sign is not None:
+                if isinstance(i, Hitter) and p > 0:
+                    print(i.pos + '/' + i.secondary, i.smallLine(), 'signs with', sign[0], 'for', sign[1], 'years',
+                          sign[2], 'AAV')
+                elif p > 0:
+                    print(i.pos+'   ', i.smallLine(), 'signs with', sign[0], 'for', sign[1], 'years', sign[2], 'AAV')
+                freeAgents.drop(freeAgents[freeAgents['Name'] == i].index, inplace=True)
+        roundNum += 1
+    if p > 0:
+        print('FREE AGENCY IS DONE AFTER', roundNum-1, 'ROUNDS')
+    for i in NLt+Alt:
+        i.hitters.sort_values(['Overall', 'Offense'], inplace=True, ascending=False)
+        i.rotation.sort_values(['Overall', 'Extension'], inplace=True, ascending=False)
+        i.bullpen.sort_values(['Overall', 'Extension'], inplace=True, ascending=False)
+    return roundNum - 1
 
 
 

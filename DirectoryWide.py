@@ -48,6 +48,23 @@ def nameGen():  # Male for MLB realism but... I might get rid of it, I did for B
     return names.get_full_name(gender='male')
 
 
+def ageCurve(age, base=False):
+    if base:
+        if age < 5:
+            return age-1
+        elif age == 5:
+            return 3
+        else:
+            return 8 - age
+    else:
+        if age < 5:
+            return 1
+        elif age == 5:
+            return 0
+        else:
+            return -1
+
+
 gravForce = -32.2  # in ft
 mphTOfts = 1.467  # ft/s = 1.467 * mph
 rubberToPlate = 60.5  # Pitcher's back foot is touching the rubber
