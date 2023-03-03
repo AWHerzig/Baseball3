@@ -120,33 +120,6 @@ Divisions = [NLEt, NLCt, NLWt, ALEt, ALCt, ALWt]
 Standings = [NLEs, NLCs, NLWs, ALEs, ALCs, ALWs]
 NLt = NLEt+NLCt+NLWt
 ALt = ALEt+ALCt+ALWt
-# Build DFs of all hitters and pitchers for each league for AS selection and EOY awards
-NLh = pandas.DataFrame(columns=['Name', 'Pos', 'OVR', 'Team'])  # NL Hitters
-NLp = pandas.DataFrame(columns=['Name', 'Pos', 'OVR', 'Team'])  # NL Pitchers
-ALh = pandas.DataFrame(columns=['Name', 'Pos', 'OVR', 'Team'])
-ALp = pandas.DataFrame(columns=['Name', 'Pos', 'OVR', 'Team'])
-for i in NLt:
-    for j in i.hitters['Name']:
-        j.team = i.ABR
-        NLh.loc[len(NLh)] = [j, j.pos, j.offense, i.ABR]
-for i in NLt:
-    for j in i.rotation['Name']:
-        j.team = i.ABR
-        NLp.loc[len(NLp)] = [j, 'SP', j.overall, i.ABR]
-    for j in i.bullpen['Name']:
-        j.team = i.ABR
-        NLp.loc[len(NLp)] = [j, 'RP', j.overall, i.ABR]
-for i in ALt:
-    for j in i.hitters['Name']:
-        j.team = i.ABR
-        ALh.loc[len(ALh)] = [j, j.pos, j.offense, i.ABR]
-for i in ALt:
-    for j in i.rotation['Name']:
-        j.team = i.ABR
-        ALp.loc[len(ALp)] = [j, 'SP', j.overall, i.ABR]
-    for j in i.bullpen['Name']:
-        j.team = i.ABR
-        ALp.loc[len(ALp)] = [j, 'RP', j.overall, i.ABR]
 Leagues = [NLt, ALt]
 # INTER LEAGUE
 geoRivals = [(NLEt[0], ALEt[4]), (NLEt[1], ALEt[0]), (NLEt[2], ALEt[3]), (NLEt[3], ALEt[1]), (NLEt[4], ALEt[2]),
@@ -279,23 +252,23 @@ def playIt(schedule):  # Plays the regular season
                 k['Played'] = [j.played for j in k['Team']]
                 k['Wins'] = [j.wins for j in k['Team']]
                 k['Losses'] = k['Played'] - k['Wins']
-                k['WPCT'] = int(1000*(k['Wins']/k['Played']))
+                k['WPCT'] = (1000 * k['Wins']) // k['Played']
                 k['Run D'] = [(j.runsFor - j.runsAgainst) for j in k['Team']]
                 k.sort_values(['WPCT', 'Run D'], inplace=True, ascending=False)  # irl tiebreak is H2H
                 print(k)
             print('ALL-STAR BREAK')
-            WSHost = allstarGame(NLp, NLh, ALp, ALh, int(schedLength)//2)  # Winner of the ASG gets top seed in WS
+            WSHost = allstarGame(int(schedLength)//2)  # Winner of the ASG gets top seed in WS
         print('SLATE', i+1)
         for j in schedule[i]:
             if j[0] and j[1]:
                 game(j[0], j[1], p=0)
-    endOfYear(NLp, NLh, ALp, ALh, int(schedLength))  # Stats Leaders
+    endOfYear(int(schedLength))  # Stats Leaders
     print('DIVISION STANDINGS')
     for i in Standings:
         i['Played'] = [j.played for j in i['Team']]
         i['Wins'] = [j.wins for j in i['Team']]
         i['Losses'] = i['Played'] - i['Wins']
-        i['WPCT'] = int(1000 * (i['Wins'] / i['Played']))
+        i['WPCT'] = (1000 * i['Wins']) // i['Played']
         i['Run D'] = [(j.runsFor - j.runsAgainst) for j in i['Team']]
         i.sort_values(['Wins', 'Run D'], inplace=True, ascending=False)
         i.iloc[0]['Team'].winDivision = True  # Secures playoff spot
@@ -360,9 +333,9 @@ def playoffs12(NLs, ALs, WSHost):  # New MLB playoff format, starting 2022
         ALCS = series(ALDS2, ALDS1, 4)
     print('World Series')
     if WSHost == 'NL':
-        WS = series(NLCS, ALCS, 4, pri=2)
+        WS = series(NLCS, ALCS, 4)
     else:
-        WS = series(ALCS, NLCS, 4, pri=2)
+        WS = series(ALCS, NLCS, 4)
     print(WS, 'wins the world series!!!')
 
 
@@ -405,9 +378,9 @@ def playoffs10(NLs, ALs, WSHost):  # MLB playoff 2012-2021 except Covid 2020
         ALCS = series(ALDS2, ALDS1, 4)
     print('World Series')
     if WSHost == 'NL':
-        WS = series(NLCS, ALCS, 4, pri=2)
+        WS = series(NLCS, ALCS, 4)
     else:
-        WS = series(ALCS, NLCS, 4, pri=2)
+        WS = series(ALCS, NLCS, 4)
     print(WS, 'wins the world series!!!')
 
 
@@ -446,9 +419,9 @@ def playoffs8(NLs, ALs, WSHost):  # MLB 1994-2011
         ALCS = series(ALDS2, ALDS1, 4)
     print('World Series')
     if WSHost == 'NL':
-        WS = series(NLCS, ALCS, 4, pri=2)
+        WS = series(NLCS, ALCS, 4)
     else:
-        WS = series(ALCS, NLCS, 4, pri=2)
+        WS = series(ALCS, NLCS, 4)
     print(WS, 'wins the world series!!!')
 
 
@@ -500,8 +473,8 @@ def playoffsDP12(NLs, ALs):  # No one ever has thought this was a good idea
     print(G19, 'WINS THE WORLD SERIES')
 
 
-
-def allstarGame(NLp, NLh, ALp, ALh, gp):  # I thought it would be fun
+def allstarGame(gp):  # I thought it would be fun
+    (NLh, NLp, ALh, ALp) = buildPDFs()
     # Set up the stats
     NLp['IP'] = [i.IP for i in list(NLp['Name'])]
     NLp['ERA'] = [i.ERA for i in list(NLp['Name'])]
@@ -559,7 +532,8 @@ def allstarGame(NLp, NLh, ALp, ALh, gp):  # I thought it would be fun
         return 'AL'
 
 
-def endOfYear(NLp, NLh, ALp, ALh, gp):
+def endOfYear(gp):
+    (NLh, NLp, ALh, ALp) = buildPDFs()
     NLp['IP'] = [i.IP for i in list(NLp['Name'])]
     NLp['ERA'] = [i.ERA for i in list(NLp['Name'])]
     NLp['WHIP'] = [i.WHIP for i in list(NLp['Name'])]
@@ -703,6 +677,8 @@ def offseason(year, p):
     go = True
     roundNum = 0
     while go:
+        if roundNum > 10:
+            p = 2
         if p > 0:
             print('ROUND', roundNum+1)
         go = False
@@ -741,11 +717,43 @@ def offseason(year, p):
         roundNum += 1
     if p > 0:
         print('FREE AGENCY IS DONE AFTER', roundNum-1, 'ROUNDS')
-    for i in NLt+Alt:
+    for i in NLt+ALt:
         i.hitters.sort_values(['Overall', 'Offense'], inplace=True, ascending=False)
-        i.rotation.sort_values(['Overall', 'Extension'], inplace=True, ascending=False)
-        i.bullpen.sort_values(['Overall', 'Extension'], inplace=True, ascending=False)
+        i.rotation.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
+        i.bullpen.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
     return roundNum - 1
+
+
+def buildPDFs():
+    # Build DFs of all hitters and pitchers for each league for AS selection and EOY awards
+    NLh = pandas.DataFrame(columns=['Name', 'Pos', 'OVR', 'Team'])  # NL Hitters
+    NLp = pandas.DataFrame(columns=['Name', 'Pos', 'OVR', 'Team'])  # NL Pitchers
+    ALh = pandas.DataFrame(columns=['Name', 'Pos', 'OVR', 'Team'])
+    ALp = pandas.DataFrame(columns=['Name', 'Pos', 'OVR', 'Team'])
+    for i in NLt:
+        for j in i.hitters['Name']:
+            j.team = i.ABR
+            NLh.loc[len(NLh)] = [j, j.pos, j.offense, i.ABR]
+    for i in NLt:
+        for j in i.rotation['Name']:
+            j.team = i.ABR
+            NLp.loc[len(NLp)] = [j, 'SP', j.overall, i.ABR]
+        for j in i.bullpen['Name']:
+            j.team = i.ABR
+            NLp.loc[len(NLp)] = [j, 'RP', j.overall, i.ABR]
+    for i in ALt:
+        for j in i.hitters['Name']:
+            j.team = i.ABR
+            ALh.loc[len(ALh)] = [j, j.pos, j.offense, i.ABR]
+    for i in ALt:
+        for j in i.rotation['Name']:
+            j.team = i.ABR
+            ALp.loc[len(ALp)] = [j, 'SP', j.overall, i.ABR]
+        for j in i.bullpen['Name']:
+            j.team = i.ABR
+            ALp.loc[len(ALp)] = [j, 'RP', j.overall, i.ABR]
+    return (NLh, NLp, ALh, ALp)
+
 
 
 

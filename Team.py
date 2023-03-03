@@ -7,7 +7,7 @@ hitterHand = [-1, -1, -1, 1, 1]  # 60% of hitters are righties
 pitcherHand = [-1, -1, -1, 1]  # 75% of pitchers are righties
 
 
-class Team: 
+class Team:
     def __init__(self, name, ABR):
         self.name = name
         self.ABR = ABR
@@ -181,6 +181,25 @@ class Team:
         remBudget = round(remBudget, 1)
         if p > 1:
             print(remBudget)
+        if (self.needs[0]+self.needs[2]+self.needs[3]) * 2 > remBudget:
+            if p:
+                print('Out of Cash')
+            for i in range(self.needs[0]):
+                dum = Hitter(nameGen(), '1B', hand=1, top=1)
+                (dum.age, dum.secondary, dum.value, dum.cost) = (0, '1B', 0, 2)
+                self.hitters.loc[len(self.hitters)] = numpy.array([dum, dum.pos, dum.secondary, dum.overall,
+                                                                   dum.offense, dum.field, dum.speed, dum.available], dtype=object)
+            for i in range(self.needs[2]):
+                dum = Pitcher(nameGen(), 'SP', hand=1, top=1)
+                (dum.age, dum.value, dum.cost) = (0, 0, 2)
+                self.rotation.loc[len(self.rotation)] = numpy.array([dum, dum.hand, dum.arsenal, dum.overall,
+                                                                     dum.release, dum.extension, dum.available], dtype=object)
+            for i in range(self.needs[3]):
+                dum = Pitcher(nameGen(), 'SP', hand=1, top=1)
+                (dum.age, dum.value, dum.cost) = (0, 0, 2)
+                self.bullpen.loc[len(self.bullpen)] = numpy.array([dum, dum.hand, dum.arsenal, dum.overall,
+                                                                     dum.release, dum.extension, dum.available],
+                                                                    dtype=object)
         avHitters = pandas.concat([fa[~fa['Pos2'].isnull()], self.prospects[~self.prospects['Pos2'].isnull()]])
         for i in avHitters['Name']:
             i.value = self.setValue(i, roundNum)
@@ -345,11 +364,11 @@ class Team:
 
     def setValue(self, player, roundNum):
         if isinstance(player, Hitter):
-            return round(((self.values[0]*player.con) + (self.values[1]*player.pow) + (self.values[2]*player.vis) +
-                    (self.values[3]*.5*(player.field+player.speed))) * (.9**roundNum), 1)
+            return max(round(((self.values[0]*player.con) + (self.values[1]*player.pow) + (self.values[2]*player.vis) +
+                    (self.values[3]*.5*(player.field+player.speed))) * (.9**roundNum), 1), 2)
         elif isinstance(player, Pitcher):
-            return round(((self.values[4] * player.cont) + (self.values[5] * player.velo) + (self.values[6] * player.move) +
-                    (self.values[7] * .5 * (player.field + player.speed))) * (.9**roundNum), 1)
+            return max(round(((self.values[4] * player.cont) + (self.values[5] * player.velo) + (self.values[6] * player.move) +
+                    (self.values[7] * .5 * (player.field + player.speed))) * (.9**roundNum), 1), 2)
         else:
             print('no')
 
