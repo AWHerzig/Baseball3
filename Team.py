@@ -11,9 +11,9 @@ class Team:
     def __init__(self, name, ABR):
         self.name = name
         self.ABR = ABR
-        self.hitters = pandas.DataFrame(columns=['Name', 'Primary', 'Secondary', 'Overall', 'Offense', 'Fielding', 'Speed', 'Available'])
-        self.rotation = pandas.DataFrame(columns=['Name', 'Hand', 'Arsenal', 'Core', 'Release', 'Extension', 'Available'])
-        self.bullpen = pandas.DataFrame(columns=['Name', 'Hand', 'Arsenal', 'Core', 'Release', 'Extension', 'Available'])
+        self.hitters = pandas.DataFrame(columns=['Name', 'Primary', 'Secondary', 'Overall', 'Offense', 'Available'])
+        self.rotation = pandas.DataFrame(columns=['Name', 'Hand', 'Arsenal', 'Core', 'Extension'])
+        self.bullpen = pandas.DataFrame(columns=['Name', 'Hand', 'Arsenal', 'Core', 'Extension', 'Available'])
         self.baselineRosters()  # Gives initial players
         self.lineupCard = Lineup(self.rotation, self.hitters, self.ABR)
         self.played = 0
@@ -27,6 +27,7 @@ class Team:
         self.needs = []
         self.prospects = None
         self.values = [0]*8
+        self.controlled = False
         for i in range(7):
             self.values[i] = random.randrange(1, 4)
         self.values[7] = random.randrange(1, 3)
@@ -42,7 +43,7 @@ class Team:
             else:
                 second = random.choice(outfieldPos)  # Outfielders stay in the outfield
             cur.secondary = second
-            self.hitters.loc[len(self.hitters)] = [cur, cur.pos, cur.secondary, cur.overall, cur.offense, cur.field, cur.speed, cur.available]
+            self.hitters.loc[len(self.hitters)] = [cur, cur.pos, cur.secondary, cur.overall, cur.offense, cur.available]
         for i in range(5):  # Round out to 13 hitters, I use a 26-man roster
             cur = Hitter(nameGen(), random.choice(hitterPos), hand=random.choice(hitterHand), top=8)
             cur.boost(ageCurve(cur.age, base=True))
@@ -53,15 +54,15 @@ class Team:
             else:
                 second = random.choice(outfieldPos)
             cur.secondary = second
-            self.hitters.loc[len(self.hitters)] = [cur, cur.pos, cur.secondary, cur.overall, cur.offense, cur.field, cur.speed, cur.available]
+            self.hitters.loc[len(self.hitters)] = [cur, cur.pos, cur.secondary, cur.overall, cur.offense, cur.available]
         for i in range(5):  # Starting pitchers
             cur = Pitcher(nameGen(), 'SP', hand=random.choice(pitcherHand), top=8)
             cur.boost(ageCurve(cur.age, base=True))
-            self.rotation.loc[len(self.rotation)] = [cur, cur.hand, cur.arsenal, cur.overall, cur.release, cur.extension, cur.available]
+            self.rotation.loc[len(self.rotation)] = [cur, cur.hand, cur.arStr, cur.overall, cur.extension]
         for i in range(8):  # Bullpen, again 13 total pitchers
             cur = Pitcher(nameGen(), 'RP', hand=random.choice(pitcherHand), top=8)
             cur.boost(ageCurve(cur.age, base=True))
-            self.bullpen.loc[len(self.bullpen)] = [cur, cur.hand, cur.arsenal, cur.overall, cur.release, cur.extension, cur.available]
+            self.bullpen.loc[len(self.bullpen)] = [cur, cur.hand, cur.arStr, cur.overall, cur.extension, cur.available]
         self.hitters.sort_values(['Overall', 'Offense'], inplace=True, ascending=False)
         self.rotation.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
         self.bullpen.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
@@ -188,18 +189,17 @@ class Team:
                 dum = Hitter(nameGen(), '1B', hand=1, top=1)
                 (dum.age, dum.secondary, dum.value, dum.cost) = (0, '1B', 0, 2)
                 self.hitters.loc[len(self.hitters)] = numpy.array([dum, dum.pos, dum.secondary, dum.overall,
-                                                                   dum.offense, dum.field, dum.speed, dum.available], dtype=object)
+                                                                   dum.offense, dum.available], dtype=object)
             for i in range(self.needs[2]):
                 dum = Pitcher(nameGen(), 'SP', hand=1, top=1)
                 (dum.age, dum.value, dum.cost) = (0, 0, 2)
-                self.rotation.loc[len(self.rotation)] = numpy.array([dum, dum.hand, dum.arsenal, dum.overall,
-                                                                     dum.release, dum.extension, dum.available], dtype=object)
+                self.rotation.loc[len(self.rotation)] = numpy.array([dum, dum.hand, dum.arStr, dum.overall,
+                                                                     dum.extension], dtype=object)
             for i in range(self.needs[3]):
                 dum = Pitcher(nameGen(), 'SP', hand=1, top=1)
                 (dum.age, dum.value, dum.cost) = (0, 0, 2)
-                self.bullpen.loc[len(self.bullpen)] = numpy.array([dum, dum.hand, dum.arsenal, dum.overall,
-                                                                     dum.release, dum.extension, dum.available],
-                                                                    dtype=object)
+                self.bullpen.loc[len(self.bullpen)] = numpy.array([dum, dum.hand, dum.arStr, dum.overall,
+                                                                   dum.extension, dum.available], dtype=object)
         avHitters = pandas.concat([fa[~fa['Pos2'].isnull()], self.prospects[~self.prospects['Pos2'].isnull()]])
         for i in avHitters['Name']:
             i.value = self.setValue(i, roundNum)
@@ -390,6 +390,13 @@ class Lineup:  # Lineup card, gets called within the game
         self.bullpen = None
         self.relieversUsed = []
 
+    def containsControlled(self):
+        answer = None
+        for i in self.dAlign:
+            if i.controlled:
+                answer = i
+        return answer
+
     def printout(self):  # Shows starting lineups
         print(self.ABR, pandas.concat([self.battingOrder, pandas.DataFrame([[self.dAlign[1], 'SP', self.dAlign[1].overall, self.dAlign[1].ERA]], columns=['Name', 'Position', 'Offense', 'OPS'])], ignore_index=True))
         # print(self.bullpen)
@@ -435,6 +442,10 @@ class ASTeam:  # This felt like hacking my own code to make a game play with fak
         self.runsFor = 0
         self.runsAgainst = 0
         self.streak = 0
+        self.controlled = False
+
+    def record(self):
+        return '('+str(self.wins)+'-'+str(self.played-self.wins)+')'
 
     def setLineup(self):
         pass
@@ -462,3 +473,10 @@ class ASLineup:
 
     def usage(self):  # AS teams don't give rest days
         pass
+
+    def containsControlled(self):
+        answer = None
+        for i in self.dAlign:
+            if i.controlled:
+                answer = i
+        return answer

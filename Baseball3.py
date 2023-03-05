@@ -18,34 +18,28 @@ from Gameplay import *
 from Team import *
 from League import *
 from Team import *
+from UserPlay import *
 from Players import *
 from DirectoryWide import *
+from Testing import *
 
+"""
+print('Test 1')
+bigtest()
+bigtest()
+print('Test 2')
+for i in range(11):
+    bigtest2(i)
+print('Test 3')
+for i in range(11):
+    bigtest3(i)
+"""
+bigtest()
+bigtest4H()
+bigtest4P()
 
-def bigtest():  # Each level of hitter plays each level of pitcher and returns some stat, usually ERA or OPS
-    testing = pandas.DataFrame(columns=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'])
-    for i in range(11):
-        print('Round', i)
-        testing.loc[len(testing)] = [test(i, j) for j in range(11)]
-    print('hitter is row, pitcher is column')
-    print(testing)
-
-
-def bigtest2(p=5):  # Each level of hitter plays specific level of pitcher and returns full outcome breakdown
-    testing = pandas.DataFrame(columns=['K', 'BB', 'HR', 'S', 'D', 'T', 'IPHR', 'Outs', 'OBP', 'SLG'])
-    for i in range(11):
-        testing.loc[len(testing)] = test2(i, p)
-    print('hitter is row, pitcher is', p)
-    print(testing)
-
-
-#for i in range(11):
-    #bigtest2(i)
-#bigtest()
-#bigtest()
-
-
-print('Values Key: [Contact, Power, Vision, Hitter Field/Speed, Control, Velocity, Movement, Pitcher FIeld/Speed]')
+"""
+print('Values Key: [Contact, Power, Vision, Hitter Field/Speed, Control, Velocity, Movement, Pitcher Field/Speed]')
 for j in Divisions:
     for i in j:
         print(i.name, 'values', i.values, 'with a budget of', i.budget)
@@ -58,6 +52,8 @@ while year <= 5:
     year += 1
 print('100%')
 go = 'True'
+offP = 1
+user = userStartup()
 while go:
     if schedLength in ['2', '162']:  # This is the kickoff for the whole thing
         playIt(schedule162)
@@ -65,11 +61,13 @@ while go:
         playIt(schedule20)
     else:
         playIt(schedule52)
-    offseason(year, 1)
+    offseason(year, offP)
     year += 1
     go = input('Input anything to play another season, just hit enter to stop')
 print('Thanks for playing :)')
-
+# with pandas.ExcelWriter('Cscore_Pow_Res.xlsx') as writer:
+#     testerDF.to_excel(writer)
+"""
 
 
 

@@ -6,7 +6,7 @@ import random
 
 
 class Pitcher:
-    def __init__(self, name, pos, hand=-1, top=11, controlled=False):
+    def __init__(self, name, pos, hand=-1, top=11, controlled=False, test=True):
         self.name = name
         while len(self.name) > 15:  # To make statlines line up better, all names are same length
             self.name = nameGen()
@@ -21,7 +21,13 @@ class Pitcher:
         self.speed = random.randrange(0, top)
         self.overall = self.cont + self.velo + self.move
         self.total = self.overall + self.field + self.speed
-        self.arsenal = random.sample(list(pitches.keys()), k=3)  # They get 3 pitches for now it might change
+        if test:
+            self.arsenal = ['4SFB', 'SLID', '12-6']
+        else:
+            self.arsenal = random.sample(list(pitches.keys()), k=3)  # They get 3 pitches for now it might change
+        self.arStr = ''
+        for i in self.arsenal:
+            self.arStr = self.arStr + i[0:2]
         self.hand = hand  # -1 for right, 1 for left
         self.release = [hand, 6]  # Release width, height
         self.extension = numpy.random.normal(6.5, .5)
@@ -101,12 +107,12 @@ class Pitcher:
                 bestValue = i[1]*(i[2]**2)
                 bestOffer = i
         if bestOffer is not None and self.pos == 'SP':
-            bestOffer[0].rotation.loc[len(bestOffer[0].rotation)] = numpy.array([self, self.hand, self.arsenal, self.overall,
-                                                                     self.release, self.extension, self.available], dtype=object)
+            bestOffer[0].rotation.loc[len(bestOffer[0].rotation)] = numpy.array([self, self.hand, self.arStr,
+                                                                                 self.overall, self.extension], dtype=object)
             self.contract = bestOffer[1:3]
         elif bestOffer is not None and self.pos == 'RP':
-            bestOffer[0].bullpen.loc[len(bestOffer[0].bullpen)] = numpy.array([self, self.hand, self.arsenal, self.overall,
-                                                                   self.release, self.extension, self.available], dtype=object)
+            bestOffer[0].bullpen.loc[len(bestOffer[0].bullpen)] = numpy.array([self, self.hand, self.arStr,
+                                                                               self.overall, self.extension, self.available], dtype=object)
             self.contract = bestOffer[1:3]
             self.team = bestOffer[0]
         return bestOffer
@@ -232,7 +238,7 @@ class Hitter:
                 bestOffer = i
         if bestOffer is not None:
             bestOffer[0].hitters.loc[len(bestOffer[0].hitters)] = numpy.array([self, self.pos, self.secondary, self.overall,
-                                                                   self.offense, self.field, self.speed, self.available], dtype=object)
+                                                                   self.offense, self.available], dtype=object)
             self.contract = bestOffer[1:3]
             self.team = bestOffer[0]
         return bestOffer

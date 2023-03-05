@@ -16,7 +16,11 @@ def odds(chance):  # inputs are 0 to 1, default of uniform()
 
 
 def quad(var, a, b, c):  # "just nice to have"
-    return var**a + var*b + c
+    return (a*(var**2)) + (var*b) + c
+
+
+def cube(var, a, b, c, d):
+    return a*(var**3) + b*(var**2) + c*var + d
 
 
 def polarDistance(R1, R2, A1, A2):  # Fielding is in polar coordinates, so distance to ball/base from spot needs this.
@@ -81,6 +85,16 @@ pitches = {'4SFB': [-2, 16, 90 * mphTOfts, -.3, 3], '2SFB': [-12, 4, 87 * mphTOf
            'CUT ': [12, -4, 85 * mphTOfts, .5, 2.7], 'SPLT': [-12, -8, 84 * mphTOfts, 0, 1.2],
            'SINK': [-6, 2, 89 * mphTOfts, 0, 2], 'SCRW': [-24, -16, 70 * mphTOfts, -.875, 1.2],
            'CHG ': [-12, -10, 81 * mphTOfts, -.5, 2]}
+fastballs = {'4SFB': [-2, 16, 90 * mphTOfts, -.3, 3], '2SFB': [-12, 4, 87 * mphTOfts, -.75, 2.5],
+             'SINK': [-6, 2, 89 * mphTOfts, 0, 2]}
+midRange = {'12-6': [2, -20, 75 * mphTOfts, 0, 1.5], 'CUT ': [12, -4, 85 * mphTOfts, .5, 2.7],
+            'CHG ': [-12, -10, 81 * mphTOfts, -.5, 2]}
+chasers = {'SLID': [32, -8, 83 * mphTOfts, 1, 2], 'SPLT': [-12, -8, 84 * mphTOfts, 0, 1.2],
+           'SCRW': [-24, -16, 70 * mphTOfts, -.875, 1.2]}
+
+
+# IN: 4SFB, CUT, 2SFB, SINK, CHG, 12-6 (really more 50/50)
+# OUT: SPLT, SLID, SCRW
 
 # Starting points (polar) for each position on any given play.
 positions = {'P ': [55, math.pi/4], 'C ': [0, 0], '1B': [100, .05*math.pi],

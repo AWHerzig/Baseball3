@@ -3,94 +3,12 @@ from Team import *
 from DirectoryWide import *
 import numpy
 
-schedLength = input('How many games per season would you like? (20, 52, 162)')  # 0 is 20, 1 and '' is 52, 2 is 162
-playoffSize = input('What playoff format would you like? (8, 10, 12, DE)')  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
-
-
-def test(hScore, pScore):  # Sims a bunch of innings and returns a stat like ERA or OPS (currently ERA)
-    # Offense
-    board = Scoreboard('STL')  # Busch Field is just like a fairly average park
-    hitter = Hitter(nameGen(), 'H ')
-    (hitter.con, hitter.pow, hitter.vis, hitter.field, hitter.speed) = (hScore, hScore, hScore, hScore, hScore)
-    oLineup = Lineup(None)
-    oLineup.dAlign = [hitter]*10
-    for i in range(9):
-        oLineup.battingOrder.loc[len(oLineup.battingOrder)] = [hitter, 'H ', hScore*3, hitter.OPS]
-    # Defense
-    pitcher = Pitcher(nameGen(), 'P ')
-    (pitcher.cont, pitcher.velo, pitcher.move, pitcher.field, pitcher.speed) = (pScore, pScore, pScore, pScore, pScore)
-    dlineup = Lineup(None)
-    dlineup.dAlign = [pitcher] * 10
-    for i in range(1000):
-        if i%100 == 0 and i>0:
-            #print(i)
-            pass
-        #print('new inning')
-        dlineup.dAlign[1].stamScore = 1000
-        inning(oLineup, dlineup, board, 0)
-    hitter.calcStats()
-    pitcher.calcStats()
-    #print('Hitter:', hScore, 'Pitcher:', pScore)
-    #print(hitter.PA, hitter.slash, hitter.OPS, hitter.HR, hitter.Sp)
-    #print(pitcher.BF, pitcher.IP, pitcher.ERA, pitcher.WHIP, pitcher.Kp)
-    return pitcher.ERA
-
-
-def test2(hScore, pScore):  # Sims a bunch of PAs and returns breakdown of results
-    # Offense
-    board = Scoreboard('STL')
-    hitter = Hitter(nameGen(), 'H ')
-    (hitter.con, hitter.pow, hitter.vis, hitter.field, hitter.speed) = (hScore, hScore, hScore, hScore, hScore)
-    oLineup = Lineup(None)
-    oLineup.dAlign = [hitter] * 10
-    for i in range(9):
-        oLineup.battingOrder.loc[len(oLineup.battingOrder)] = [hitter, 'H ', hScore * 3, hitter.OPS]
-    # Defense
-    pitcher = Pitcher(nameGen(), 'P ')
-    (pitcher.cont, pitcher.velo, pitcher.move, pitcher.field, pitcher.speed) = (pScore, pScore, pScore, pScore, pScore)
-    dlineup = Lineup(None)
-    dlineup.dAlign = [pitcher] * 10
-    K = 0
-    BB = 0
-    HR = 0
-    S = 0
-    D = 0
-    T = 0
-    IPHR = 0
-    outs = 0
-    for i in range(10000):
-        board.refresh()
-        board.pitcher = pitcher
-        board.hitter = hitter
-        hitter.chargedTo = pitcher
-        res = PA(dlineup.dAlign, hitter, board, 0)
-        if res == 'K':
-            K += 1
-        elif res == 'BB':
-            BB += 1
-        elif res == 'Home Run':
-            HR += 1
-        elif res[1] == 'single':
-            S += 1
-        elif res[1] == 'double':
-            D += 1
-        elif res[1] == 'triple':
-            T += 1
-        elif res[1] == 'IPHR':
-            IPHR += 1
-        elif res[1] == 'out':
-            outs += 1
-        else:
-            print(res, 'bruh')
-    AVG = (HR+S+D+T+IPHR) / (10000 - BB)
-    OBP = (HR+S+D+T+IPHR+BB) / 10000
-    SLG = ((4*HR)+S+(2*D)+(3*T)+(4*IPHR)) / (10000 - BB)
-    return [int(K), int(BB), int(HR), int(S), int(D), int(T), int(IPHR), int(outs), int(OBP * 1000), int(SLG * 1000)]
-
+#schedLength = input('How many games per season would you like? (20, 52, 162)')  # 0 is 20, 1 and '' is 52, 2 is 162
+#playoffSize = input('What playoff format would you like? (8, 10, 12, DE)')  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
 
 seriesHome = [None, [0], [0, 0, 0], [0, 0, 1, 1, 0], [0, 0, 1, 1, 1, 0, 0]]
 # First index is series length (in wins needed), second index: 0 means better seed hosts game, 1 means worse seed
-
+"""
 print('Building the teams')
 NLEt = [Team('Washington Nationals ', 'WSN'), Team('New York Mets        ', 'NYM'),
         Team('Atlanta Braves       ', 'ATL'), Team('Miami Marlins        ', 'MIA'),
@@ -213,7 +131,7 @@ for i in range(177):
 
 # 20 Game Schedule - 2 Geo Rival + 8 divisional + 10 non divisional same league, Home = Away not promised
 schedule20 = geoRivalsFinal + geoRivals2Final + divisionalSlates + leagueSlates
-
+"""
 
 def series(top, bot, l, pri=1, losers=False, wins=False):  # Top seed, bottom seed, games needed to win, print value
     if wins:
