@@ -6,7 +6,7 @@ import random
 
 
 class Pitcher:
-    def __init__(self, name, pos, hand=-1, top=11, controlled=False, test=True):
+    def __init__(self, name, pos, hand=-1, top=11, controlled=False, test=False):
         self.name = name
         while len(self.name) > 15:  # To make statlines line up better, all names are same length
             self.name = nameGen()
@@ -69,7 +69,7 @@ class Pitcher:
         return self.name + '(' + str(self.age) + ';' + str(self.cont) + ',' + str(self.velo) + ',' + str(self.move) + ';' + str(round(self.ERA, 2)) + ')'
 
     def canGetThere(self, dist, time):
-        return dist < (20 + self.speed) * (time-1.5 + (.1*self.field)) + (self.field / 2)
+        return dist < (20 + self.speed) * (time-1.5 + (.05*self.field)) + (self.field / 4)
 
     def reset(self):  # Year to year reset
         self.available = True
@@ -167,6 +167,7 @@ class Hitter:
         self.Sp = 0
         self.zMissA = 0
         self.slash = ''
+        self.BABIP = 0
 
     def __str__(self):
         return self.name
@@ -178,6 +179,8 @@ class Hitter:
             self.AVG = round(self.H / (self.PA - self.BB), 3)
             self.SLG = round(self.TB / (self.PA - self.BB), 3)
             self.OPS = round(self.OBP + self.SLG, 3)
+        if self.PA - self.BB - self.HR - self.K > 0:
+            self.BABIP = round((self.H - self.HR) / (self.PA - self.BB - self.HR - self.K), 3)
         if self.SB + self.CS > 0:
             self.Sp = round(self.SB / (self.SB + self.CS), 3)
         if self.swings > 0:
@@ -189,9 +192,9 @@ class Hitter:
 
     def canGetThere(self, dist, time):
         if self.outOfPos:
-            return dist < (20 + self.speed) * (time-1.5 + (.1*self.field)) + (self.field / 2)
+            return dist < (20 + self.speed) * (time-1.5 + (.05*self.field)) + (self.field / 4)
         else:
-            return dist < (20 + self.speed) * (time-2.5 + (.1*self.field)) + (self.field / 2)
+            return dist < (20 + self.speed) * (time-2.5 + (.05*self.field)) + (self.field / 4)
 
     def reset(self):
         self.PA = 0

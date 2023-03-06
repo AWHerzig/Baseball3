@@ -23,22 +23,13 @@ from Players import *
 from DirectoryWide import *
 from Testing import *
 
-"""
-print('Test 1')
-bigtest()
-bigtest()
-print('Test 2')
-for i in range(11):
-    bigtest2(i)
-print('Test 3')
-for i in range(11):
-    bigtest3(i)
-"""
-bigtest()
-bigtest4H()
-bigtest4P()
-
-"""
+#bigtest()
+#bigtest2()
+#bigtest3()
+#bigtest4H()
+#bigtest4P()
+#bigtest5()
+#"""
 print('Values Key: [Contact, Power, Vision, Hitter Field/Speed, Control, Velocity, Movement, Pitcher Field/Speed]')
 for j in Divisions:
     for i in j:
@@ -67,7 +58,7 @@ while go:
 print('Thanks for playing :)')
 # with pandas.ExcelWriter('Cscore_Pow_Res.xlsx') as writer:
 #     testerDF.to_excel(writer)
-"""
+#"""
 
 
 

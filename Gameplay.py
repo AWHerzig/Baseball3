@@ -88,6 +88,8 @@ def findP(accel, velo, pos, time):
 
 
 def findT(accel, velo, pF, pI):  # This is +- in there but I used - cuz it's the later (real) one
+    if velo**2 - 2*accel*(pI - pF) <= 0:
+        print('nonononon')
     return (-velo - math.sqrt(velo**2 - 2*accel*(pI - pF))) / accel
 
 
@@ -329,8 +331,8 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
     # print(pType)
     #pType = 'SPLT'
     baselines = pitches[pType]
-    Ax = baselines[0] * (1 + .08 * (pitcher.move - 5))  # Higher movement pitchers get more acceleration
-    Ay = (baselines[1] * (1 + .08 * (pitcher.move - 5))) + gravForce
+    Ax = baselines[0] * (.7 + .06 * (pitcher.move - 1))  # Higher movement pitchers get more acceleration
+    Ay = (baselines[1] * (.7 + .06 * (pitcher.move - 2))) + gravForce
     Az = 0  # For now, no drag
     Vz = -1 * (baselines[2] + (1 * (pitcher.velo - 5) * mphTOfts))
     Px = pitcher.release[0]  # Starting spot
@@ -339,16 +341,17 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
     Pz = rubberToPlate - pitcher.extension  # This one can change, while distToPlate will remain constant
     timeToPlate = - Pz / Vz  # constant velo
     if steal:  # how far they got during the pitch
-        board.basepaths[1] = (20 + board.B1.speed) * (timeToPlate + .9)
+        board.basepaths[1] = (20 + .5 * board.B1.speed) * (timeToPlate + .9)
     timeTraveled = 0
     if pitcher.controlled:
         xPick = float(input('X-coordinate aim?'))
         yPick = float(input('Y-coordinate aim?'))
         pAtt = [xPick, yPick]
     else:
-        pAtt = [baselines[3], baselines[4]]  # Standard spot for given pitch type
+        # pAtt = [baselines[3], baselines[4]]  # Standard spot for given pitch type
         # pAtt = [0, 2.5]
-    pSpot = [numpy.random.normal(pAtt[0], max((12-pitcher.cont)*.01, 0)), numpy.random.normal(pAtt[1], max((12-pitcher.cont)*.02, 0))]
+        pAtt = [random.uniform(-1.2, 1.2), random.uniform(1, 4)]
+    pSpot = [numpy.random.normal(pAtt[0], max((17-pitcher.cont)*.02, 0)), numpy.random.normal(pAtt[1], max((17-pitcher.cont)*.04, 0))]
     #print(pSpot)
     Vx = numpy.random.normal(findVinit(Ax, pSpot[0] - Px, timeToPlate), 0)  # The normal doesnt do anything rn
     Vy = numpy.random.normal(findVinit(Ay, pSpot[1] - Py, timeToPlate), 0)  # Used to, kept in case i want it back
@@ -383,6 +386,7 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
                 xSwing = findP(Ax, Vx, Px, timeTotal)
                 ySwing = findP(Ay, Vy, Py, timeTotal)
                 zSwing = findP(Az, Vz, Pz, timeTotal)
+                penalty = .1 * (10 - hitter.vis)
             except Exception:  # Basically keeps the while loop going, terrible coding practice never do this
                 i += 1
                 time += split
@@ -392,20 +396,23 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
             swing = None  # Swinging when the runner goes is generally frowned upon
         else:  # TAKE 2, it didn't really work but what can ya do
             swing = None
-            decTime = .25  # When they have to make a decision
+            #decDist = 20
+            #decTime = (distToPlate - decDist) / -Vz  # When they have to make a decision
+            decTime = timeToPlate - .25
             # for all of this, t at the end means true, g means guess.
             (xPt, yPt, zPt) = (findP(Ax, Vx, Px, decTime), findP(Ay, Vy, Py, decTime), findP(Az, Vz, Pz, decTime))
             (xVt, yVt, zVt) = (findVfinal(Ax, Vx, decTime), findVfinal(Ay, Vy, decTime), findVfinal(Az, Vz, decTime))
-            xPg = numpy.random.normal(xPt, max(.02 * (15-hitter.vis), 0))
-            yPg = numpy.random.normal(yPt, max(.02 * (15-hitter.vis), 0))
-            zPg = numpy.random.normal(zPt, max(.2 * (15-hitter.vis), 0))
-            xVg = numpy.random.normal(xVt, max(.2 * (15-hitter.vis), 0))
-            yVg = numpy.random.normal(yVt, max(.3 * (15-hitter.vis), 0))
+            xPg = numpy.random.normal(xPt, max((.01 * (10-hitter.vis) + .01 * pitcher.velo), 0))
+            yPg = numpy.random.normal(yPt, max((.01 * (10-hitter.vis) + .01 * pitcher.velo), 0))
+            zPg = numpy.random.normal(zPt, max((.1 * (10-hitter.vis) + .1 * pitcher.velo), 0))
+            xVg = numpy.random.normal(xVt, max((.1 * (10-hitter.vis) + .1 * pitcher.velo), 0))
+            yVg = numpy.random.normal(yVt, max(.1 * (10-hitter.vis) + .1 * pitcher.velo, 0))
             zVg = (distToPlate - zPg)/decTime
             timeLeftG = zPg / zVg
             cpG = [findP(0, xVg, xPg, timeLeftG), findP(gravForce, yVg, yPg, timeLeftG)]  #
             if -.875 <= cpG[0] <= .875 and 1.5 <= cpG[1] <= 3.5:  # If they think it's in the zone
                 swing = ''
+                penalty = 4 * pythag(cpG[0] - crossPlate[0], cpG[1]-crossPlate[1])
                 swingTime = decTime + timeLeftG
                 xSwing = findP(Ax, Vx, Px, swingTime)
                 ySwing = findP(Ay, Vy, Py, swingTime)
@@ -465,21 +472,22 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
             return 'ball'
     else:  # This is the engine room, not sure if it really makes any sense
         offCenter = pythag(xSwing/.875, ySwing - 2.5)  # Edge of the K zone returns 1.
-        contactScore = (13 - (zSwing**2)) * (1 - math.sin(min(offCenter, 2) * math.pi * .25)) * (.8 + hitter.con*.05)
+        contactScore = (13 - (zSwing**2)) * (1.1 - math.sin(min(offCenter, 2) * math.pi * .25)) * math.sqrt(1.1 + hitter.con*.01)
         # quad is so 10-hitter gets x2, 0 hitter gets x.5.
         # Sin so oC of 1 gets you like x.3, dead center is x1, oC of 2 or more goes to 0.
         if hitter.hand * pitcher.hand == -1:  # Wanted some kind of benefit for this, but I dont really get it
             contactScore += 1
+        contactScore -= penalty
         if board.p >= 4:
             print('Z:', round(zSwing, 2), 'Off-center:', round(offCenter, 2), 'cScore:', round(contactScore, 2))
-        if contactScore < 2:  # So bad of contact there wasn't even contact
+        if contactScore < 1 or ySwing <= 0:  # So bad of contact there wasn't even contact
             if steal:
                 spiked = crossPlate[0] < .5
                 stealAdj(board, defense[2],  spiked)
             return 'whiff'
         else:  # Bat on Ball action
             launchAngle = math.radians(numpy.random.normal(35, max(0, 10*(10-contactScore))))
-            exitVelo = (5*contactScore + 12*(.8 + hitter.pow*.05)) * mphTOfts
+            exitVelo = (4*contactScore + 20*(1.5 + hitter.pow*.02)) * mphTOfts
             angle = math.radians(numpy.random.uniform(-45, 135))  # This is direction, like to left field or right field
             # Right now this is pretty whack, so this is subject to change when I figure out a better way to get FBs^
             if board.p >= 3:
@@ -610,10 +618,10 @@ def pickupBall(Vx, dist, angle, defense, startTime, wallDist):  # Has hit the gr
 def throwDec(fielder, defense, timeSinceCheckpoint, dist, angle, runners, board):  # Fielders pick where to throw.
     # fielder has the ball, defense is the whole team, dist is from plate as usual
     throwSpeed = (75 + fielder.field) * mphTOfts
-    guessRunTimeH = (90-board.basepaths[3]) / 25  # Guesses assume average runner so bad decisions can be made
-    guessRunTime3 = (90 - board.basepaths[2]) / 25
-    guessRunTime2 = (90 - board.basepaths[1]) / 25
-    guessRunTime1 = (90 - board.basepaths[0]) / 21
+    guessRunTimeH = (90-board.basepaths[3]) / 22.5  # Guesses assume average runner so bad decisions can be made
+    guessRunTime3 = (90 - board.basepaths[2]) / 22.5
+    guessRunTime2 = (90 - board.basepaths[1]) / 22.5
+    guessRunTime1 = (90 - board.basepaths[0]) / 19.5
     distTo1st = polarDistance(dist, 90, angle, 0)
     distTo2nd = polarDistance(dist, 90*math.sqrt(2), angle, math.pi/4)
     distTo3rd = polarDistance(dist, 90, angle, math.pi/2)
@@ -685,7 +693,7 @@ def baseRunDec(time, dist, angle, board):  # Runners decide whether to go. time 
     running = []  # This will eventually get returned, if still empty then, no one is running and play is dead
     guessThrowSpeed = 80 * mphTOfts  # Guess is for average fielder, so bad decisions can be made
     if board.B3:
-        runTime = (90 - board.basepaths[3]) / (20 + board.B3.speed)
+        runTime = (90 - board.basepaths[3]) / (20 + .5 * board.B3.speed)
         if board.B2 and board.B1 and board.force:  # Bases loaded
             if board.B3.controlled:
                 print('Force play, you are running to home')
@@ -706,7 +714,7 @@ def baseRunDec(time, dist, angle, board):  # Runners decide whether to go. time 
                 else:
                     board.basepaths[3] = 0
     if board.B2:
-        runTime = (90 - board.basepaths[2]) / (20 + board.B2.speed)
+        runTime = (90 - board.basepaths[2]) / (20 + .5 * board.B2.speed)
         if board.B1 and board.force:
             if board.B2.controlled:
                 print('Force play, you are running to third')
@@ -732,7 +740,7 @@ def baseRunDec(time, dist, angle, board):  # Runners decide whether to go. time 
                 else:
                     board.basepaths[2] = 0
     if board.B1:
-        runTime = (90 - board.basepaths[1]) / (20 + board.B1.speed)
+        runTime = (90 - board.basepaths[1]) / (20 + .5 * board.B1.speed)
         if board.force:
             if board.B1.controlled:
                 print('Force play, you are running to second')
@@ -771,7 +779,7 @@ def adjudication(fielder, dist, angle, runners, throw, board, timeSinceCheckpoin
     throwSpeed = (75 + fielder.field) * mphTOfts
     throwTime = .75 + (dist / throwSpeed)
     if throw == 0:  # Throw goes home
-        runTime = (90 - board.basepaths[3]) / (20 + board.B3.speed)
+        runTime = (90 - board.basepaths[3]) / (20 + .5 * board.B3.speed)
         if runTime < throwTime + timeSinceCheckpoint:  # Safe at home
             if board.scoring == 'triple':  # this guy is the orignal hitter who came all the way around to score
                 board.scoring = 'IPHR'
@@ -794,7 +802,7 @@ def adjudication(fielder, dist, angle, runners, throw, board, timeSinceCheckpoin
         board.B3 = None
         board.basepaths[3] = 0
     elif board.B3 and board.B3 in runners:  # This means throw isn't home, uncontested.
-        board.basepaths[3] += (timeSinceCheckpoint + throwTime) * (20 + board.B3.speed)
+        board.basepaths[3] += (timeSinceCheckpoint + throwTime) * (20 + .5 * board.B3.speed)
         if board.basepaths[3] >= 90:
             if board.scoring == 'triple':
                 board.scoring = 'IPHR'
@@ -806,7 +814,7 @@ def adjudication(fielder, dist, angle, runners, throw, board, timeSinceCheckpoin
             board.basepaths[3] = 0
             board.B3 = None
     if throw == 3:
-        runTime = (90 - board.basepaths[2]) / (20 + board.B2.speed)
+        runTime = (90 - board.basepaths[2]) / (20 + .5 * board.B2.speed)
         if runTime < throwTime + timeSinceCheckpoint:  # Safe at third
             if board.p >= 3:
                 print('safe at third base')
@@ -814,11 +822,11 @@ def adjudication(fielder, dist, angle, runners, throw, board, timeSinceCheckpoin
                 board.scoring = 'triple'
             if board.B3 is None:
                 board.B3 = board.B2
-                board.basepaths[3] = (20 + board.B2.speed)*(throwTime + timeSinceCheckpoint - runTime)  # for next CP
+                board.basepaths[3] = (20 + .5 * board.B2.speed)*(throwTime + timeSinceCheckpoint - runTime)  # for next CP
                 board.B2 = None
                 board.basepaths[2] = 0
             else:  # Have to be treated as 2nd base for a bit here, this gets solved in FF (the one aidan is proud of)
-                board.basepaths[2] = 90 + (20 + board.B2.speed) * (throwTime + timeSinceCheckpoint - runTime)
+                board.basepaths[2] = 90 + (20 + .5 * board.B2.speed) * (throwTime + timeSinceCheckpoint - runTime)
         else:
             if board.force:
                 board.scoring = 'FC'
@@ -832,7 +840,7 @@ def adjudication(fielder, dist, angle, runners, throw, board, timeSinceCheckpoin
             if board.outs >= 3:
                 return [0, 0, defense[2], runsScored, 0]
     elif board.B2 and board.B2 in runners:
-        board.basepaths[2] += (timeSinceCheckpoint+throwTime) * (20 + board.B2.speed)
+        board.basepaths[2] += (timeSinceCheckpoint+throwTime) * (20 + .5 * board.B2.speed)
         if board.basepaths[2] >= 90 and board.B3 is None:
             if board.scoring == 'double':
                 board.scoring = 'triple'
@@ -841,7 +849,7 @@ def adjudication(fielder, dist, angle, runners, throw, board, timeSinceCheckpoin
             board.basepaths[2] = 0
             board.B2 = None
     if throw == 2:
-        runTime = (90 - board.basepaths[1]) / (20 + board.B1.speed)
+        runTime = (90 - board.basepaths[1]) / (20 + .5 * board.B1.speed)
         if runTime < throwTime + timeSinceCheckpoint:  # Safe at 2nd
             if board.p >= 3:
                 print('safe at second base')
@@ -849,11 +857,11 @@ def adjudication(fielder, dist, angle, runners, throw, board, timeSinceCheckpoin
                 board.scoring = 'double'
             if board.B2 is None:
                 board.B2 = board.B1
-                board.basepaths[2] = (20 + board.B1.speed)*(throwTime + timeSinceCheckpoint - runTime)
+                board.basepaths[2] = (20 + .5 * board.B1.speed)*(throwTime + timeSinceCheckpoint - runTime)
                 board.B1 = None
                 board.basepaths[1] = 0
             else:
-                board.basepaths[1] = 90 + (20 + board.B1.speed) * (throwTime + timeSinceCheckpoint - runTime)
+                board.basepaths[1] = 90 + (20 + .5 * board.B1.speed) * (throwTime + timeSinceCheckpoint - runTime)
         else:
             if board.p >= 3:
                 print('out at second')
@@ -867,7 +875,7 @@ def adjudication(fielder, dist, angle, runners, throw, board, timeSinceCheckpoin
             if board.outs >= 3:
                 return [0, 0, defense[2], runsScored, 0]
     elif board.B1 and board.B1 in runners:
-        board.basepaths[1] += (timeSinceCheckpoint+throwTime) * (20 + board.B1.speed)
+        board.basepaths[1] += (timeSinceCheckpoint+throwTime) * (20 + .5 * board.B1.speed)
         if board.basepaths[1] >= 90 and board.B2 is None:
             if board.scoring == 'single':
                 board.scoring = 'double'
@@ -876,7 +884,7 @@ def adjudication(fielder, dist, angle, runners, throw, board, timeSinceCheckpoin
             board.basepaths[1] = 0
             board.B1 = None
     if throw == 1:
-        runTime = (90 - board.basepaths[0]) / (16 + board.hitter.speed)
+        runTime = (90 - board.basepaths[0]) / (16 + .5 * board.hitter.speed)
         if runTime < throwTime + timeSinceCheckpoint:  # Safe at 1st
             if board.p >= 3:
                 print('safe at first')
@@ -885,11 +893,11 @@ def adjudication(fielder, dist, angle, runners, throw, board, timeSinceCheckpoin
                 board.scoring = 'single'
             if board.B1 is None:
                 board.B1 = board.hitter
-                board.basepaths[1] = (20 + board.hitter.speed)*(throwTime + timeSinceCheckpoint - runTime)
+                board.basepaths[1] = (20 + .5 * board.hitter.speed)*(throwTime + timeSinceCheckpoint - runTime)
                 board.hitter = None
                 board.basepaths[0] = 0
             else:
-                board.basepaths[0] = 90 + (20 + board.hitter.speed) * (throwTime + timeSinceCheckpoint - runTime)
+                board.basepaths[0] = 90 + (20 + .5 * board.hitter.speed) * (throwTime + timeSinceCheckpoint - runTime)
         else:
             if board.p >= 3:
                 print('out at first')
@@ -904,7 +912,7 @@ def adjudication(fielder, dist, angle, runners, throw, board, timeSinceCheckpoin
                 return [0, 0, defense[2], 0, 0]
             board.force = False
     elif board.hitter and board.hitter in runners:
-        board.basepaths[0] += (timeSinceCheckpoint+throwTime) * (20 + board.hitter.speed)
+        board.basepaths[0] += (timeSinceCheckpoint+throwTime) * (20 + .5 * board.hitter.speed)
         if board.basepaths[0] >= 90 and board.B1 is None:
             if board.scoring == 'out':
                 board.scoring = 'single'
@@ -956,7 +964,7 @@ def prePickupRunnin(board, ogCheckpoint):  # For long hits,
     # best decision-making is made when hitters are treated for mose recent base
     runs = 0
     if board.B3:
-        runTime = (90 - board.basepaths[3]) / (20 + board.B3.speed)
+        runTime = (90 - board.basepaths[3]) / (20 + .5 * board.B3.speed)
         if runTime < ogCheckpoint + .75:  # +.75 includes ball in glove but before release
             if board.scoring == 'triple':
                 board.scoring = 'IPHR'
@@ -968,7 +976,7 @@ def prePickupRunnin(board, ogCheckpoint):  # For long hits,
             board.basepaths[3] = 0
             board.B3 = None
     if board.B2 and board.B3 is None:
-        runTime = (90 - board.basepaths[2]) / (20 + board.B2.speed)
+        runTime = (90 - board.basepaths[2]) / (20 + .5 * board.B2.speed)
         if runTime < ogCheckpoint + .75:
             if board.scoring == 'double':
                 board.scoring = 'triple'
@@ -977,7 +985,7 @@ def prePickupRunnin(board, ogCheckpoint):  # For long hits,
             board.basepaths[2] = 0
             board.B2 = None
     if board.B1 and board.B2 is None:
-        runTime = (90 - board.basepaths[1]) / (20 + board.B1.speed)
+        runTime = (90 - board.basepaths[1]) / (20 + .5 * board.B1.speed)
         if runTime < ogCheckpoint + .75:
             if board.scoring == 'single':
                 board.scoring = 'double'
@@ -986,7 +994,7 @@ def prePickupRunnin(board, ogCheckpoint):  # For long hits,
             board.basepaths[1] = 0
             board.B1 = None
     if board.hitter and board.B1 is None:
-        runTime = (90 - board.basepaths[0]) / (20 + board.hitter.speed)
+        runTime = (90 - board.basepaths[0]) / (20 + .5 * board.hitter.speed)
         if runTime < ogCheckpoint + .75:
             if board.scoring == 'out':
                 board.scoring = 'single'
@@ -1012,19 +1020,19 @@ def fastForward(board):  # If you got a text from Aidan late one night saying
     checkpointTime = 0
     # Find who needs the most time to fix the problem
     if board.basepaths[0] > 90 and board.B1:
-        checkpointTime = (90 - board.basepaths[1]) / (20 + board.B1.speed)
+        checkpointTime = (90 - board.basepaths[1]) / (20 + .5 * board.B1.speed)
     if (board.basepaths[1] > 90 and board.B2) or (board.basepaths[0] > 90 and board.B1 and board.B2):
-        timeToGo = (90 - board.basepaths[2]) / (20 + board.B2.speed)
+        timeToGo = (90 - board.basepaths[2]) / (20 + .5 * board.B2.speed)
         if timeToGo > checkpointTime:
             checkpointTime = timeToGo
     if (board.basepaths[2] > 90 and board.B3) or (board.basepaths[1] > 90 and board.B2 and board.B3) or \
             (board.basepaths[0] > 90 and board.B1 and board.B2 and board.B3):
-        timeToGo = (90 - board.basepaths[3]) / (20 + board.B3.speed)
+        timeToGo = (90 - board.basepaths[3]) / (20 + .5 * board.B3.speed)
         if timeToGo > checkpointTime:
             checkpointTime = timeToGo
     # Now push everyone forward by that much time
     if board.B3:
-        board.basepaths[3] += checkpointTime*(20 + board.B3.speed)
+        board.basepaths[3] += checkpointTime*(20 + .5 * board.B3.speed)
         if board.basepaths[3] >= 90:
             if board.scoring == 'triple':
                 board.scoring = 'IPHR'
@@ -1036,7 +1044,7 @@ def fastForward(board):  # If you got a text from Aidan late one night saying
             board.basepaths[3] = 0
             board.B3 = None
     if board.B2:
-        board.basepaths[2] += checkpointTime*(20 + board.B2.speed)
+        board.basepaths[2] += checkpointTime*(20 + .5 * board.B2.speed)
         if board.basepaths[2] >= 90:
             if board.scoring == 'double':
                 board.scoring = 'triple'
@@ -1045,7 +1053,7 @@ def fastForward(board):  # If you got a text from Aidan late one night saying
             board.B3 = board.B2
             board.B2 = None
     if board.B1:
-        board.basepaths[1] += checkpointTime * (20 + board.B1.speed)
+        board.basepaths[1] += checkpointTime * (20 + .5 * board.B1.speed)
         if board.basepaths[1] >= 90:
             if board.scoring == 'single':
                 board.scoring = 'double'
@@ -1054,7 +1062,7 @@ def fastForward(board):  # If you got a text from Aidan late one night saying
             board.B2 = board.B1
             board.B1 = None
     if board.hitter:
-        board.basepaths[0] += checkpointTime * (20 + board.hitter.speed)
+        board.basepaths[0] += checkpointTime * (20 + .5 * board.hitter.speed)
         if board.basepaths[0] >= 90:
             if board.scoring == 'out':
                 board.scoring = 'single'
@@ -1098,11 +1106,11 @@ def stealDec(board):  # Runners may steal second
     if not board.B1 or board.B2:
         return False
     if board.outs == 1:  # There's a thing about avoiding outs 1 and 3 at second (or out 3 at 3rd)
-        return odds(.05 * board.B1.speed)
+        return odds(.05 * .5 * board.B1.speed)
     elif board.outs == 0:
-        return odds(.025 * board.B1.speed)
+        return odds(.025 * .5 * board.B1.speed)
     else:
-        return odds(.025 * board.B1.speed)
+        return odds(.025 * .5 * board.B1.speed)
 
 
 def stealAdj(board, catcher, spiked):  # Steal adjudication
@@ -1114,7 +1122,7 @@ def stealAdj(board, catcher, spiked):  # Steal adjudication
         popTime = 4
     else:  # Spiked
         popTime = 3.2 - (.02 * catcher.field)
-    runTime = (90 - board.basepaths[1]) / (20 + board.B1.speed)
+    runTime = (90 - board.basepaths[1]) / (20 + .5 * board.B1.speed)
     if runTime < popTime:  # the running for pitch time has already been done
         board.B1.SB += 1
         if board.p >= 2:

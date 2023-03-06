@@ -3,12 +3,12 @@ from Team import *
 from DirectoryWide import *
 import numpy
 
-#schedLength = input('How many games per season would you like? (20, 52, 162)')  # 0 is 20, 1 and '' is 52, 2 is 162
-#playoffSize = input('What playoff format would you like? (8, 10, 12, DE)')  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
+schedLength = input('How many games per season would you like? (20, 52, 162)')  # 0 is 20, 1 and '' is 52, 2 is 162
+playoffSize = input('What playoff format would you like? (8, 10, 12, DE)')  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
 
 seriesHome = [None, [0], [0, 0, 0], [0, 0, 1, 1, 0], [0, 0, 1, 1, 1, 0, 0]]
 # First index is series length (in wins needed), second index: 0 means better seed hosts game, 1 means worse seed
-"""
+#"""
 print('Building the teams')
 NLEt = [Team('Washington Nationals ', 'WSN'), Team('New York Mets        ', 'NYM'),
         Team('Atlanta Braves       ', 'ATL'), Team('Miami Marlins        ', 'MIA'),
@@ -131,7 +131,7 @@ for i in range(177):
 
 # 20 Game Schedule - 2 Geo Rival + 8 divisional + 10 non divisional same league, Home = Away not promised
 schedule20 = geoRivalsFinal + geoRivals2Final + divisionalSlates + leagueSlates
-"""
+#"""
 
 def series(top, bot, l, pri=1, losers=False, wins=False):  # Top seed, bottom seed, games needed to win, print value
     if wins:
