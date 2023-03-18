@@ -3,6 +3,7 @@ from Players import *
 from DirectoryWide import *
 import pandas
 import random
+
 hitterHand = [-1, -1, -1, 1, 1]  # 60% of hitters are righties
 pitcherHand = [-1, -1, -1, 1]  # 75% of pitchers are righties
 
@@ -26,13 +27,21 @@ class Team:
         self.prevWins = 0
         self.needs = []
         self.prospects = None
-        self.values = [0]*8
+        self.values = [0] * 8
         self.controlled = False
         for i in range(7):
             self.values[i] = random.randrange(1, 4)
         self.values[7] = random.randrange(1, 3)
         self.budget = round(numpy.random.normal(500, 100))
         self.streak = 0
+
+    def setTeam(self):
+        for z in self.hitters['Name']:
+            z.team = self.ABR
+        for z in self.rotation['Name']:
+            z.team = self.ABR
+        for z in self.bullpen['Name']:
+            z.team = self.ABR
 
     def baselineRosters(self):
         for i in hitterPos:  # Gives at least one player who's primary position is each pos
@@ -84,14 +93,20 @@ class Team:
         self.lineupCard.dAlign[1] = SP
         for i in range(2, 10):
             try:
-                cur = self.hitters[((self.hitters['Primary']==posNotation[i]) | (self.hitters['Secondary']==posNotation[i])) & ~self.hitters['Name'].isin(self.lineupCard.dAlign) & self.hitters['Available']==True].iloc[0]['Name']
+                cur = self.hitters[
+                    ((self.hitters['Primary'] == posNotation[i]) | (self.hitters['Secondary'] == posNotation[i])) & ~
+                    self.hitters['Name'].isin(self.lineupCard.dAlign) & self.hitters['Available'] == True].iloc[0][
+                    'Name']
                 # Best available hitter with positional eligibility who hasn't already been placed in the lineup
                 self.lineupCard.dAlign[i] = cur
-                self.lineupCard.battingOrder.loc[len(self.lineupCard.battingOrder)] = [cur, posNotation[i], cur.offense, cur.OPS]
+                self.lineupCard.battingOrder.loc[len(self.lineupCard.battingOrder)] = [cur, posNotation[i], cur.offense,
+                                                                                       cur.OPS]
             except IndexError:  # No Available hitter with positional eligibility not in roster already
                 pushback.append(i)
         for i in pushback:
-            cur = self.hitters[~self.hitters['Name'].isin(self.lineupCard.dAlign) & self.hitters['Available']==True].iloc[0]['Name']
+            cur = \
+            self.hitters[~self.hitters['Name'].isin(self.lineupCard.dAlign) & self.hitters['Available'] == True].iloc[
+                0]['Name']
             cur.outOfPos = True
             self.lineupCard.dAlign[i] = cur
             self.lineupCard.battingOrder.loc[len(self.lineupCard.battingOrder)] = [cur, posNotation[i], cur.offense,
@@ -99,13 +114,16 @@ class Team:
         self.lineupCard.battingOrder.sort_values(['Offense', 'OPS'], ascending=False, inplace=True)
         self.bullpen['Available'] = [i.available for i in list(self.bullpen['Name'])]
         self.lineupCard.bullpen = self.bullpen
+        for i in self.lineupCard.bullpen['Name']:
+            i.saveOp = False
+        self.lineupCard.dAlign[1].saveOp = False
         # self.lineupCard.printout()
 
     def __str__(self):
         return self.name
 
     def record(self):
-        return '('+str(self.wins)+'-'+str(self.played-self.wins)+')'
+        return '(' + str(self.wins) + '-' + str(self.played - self.wins) + ')'
 
     def reset(self):
         FAs = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
@@ -138,13 +156,22 @@ class Team:
         self.runsAgainst = 0
         self.winDivision = False
         self.seed = ''
+        self.streak = 0
         return FAs
+
+    def softReset(self):
+        self.played = 0
+        self.wins = 0
+        self.runsFor = 0
+        self.runsAgainst = 0
 
     def needCheck(self):  # [Needed Hitters, By position, Needed pitchers, [SP, RP]]
         needs = [0, [None, None, 0, 0, 0, 0, 0, 0, 0, 0], 0, 0]
         needs[0] = 13 - len(self.hitters)
         for i in range(2, 10):
-            needs[1][i] = clamp(2 - len(self.hitters[((self.hitters['Primary'] == posNotation[i]) | (self.hitters['Secondary'] == posNotation[i]))]), 0, 13)
+            needs[1][i] = clamp(2 - len(self.hitters[(
+                        (self.hitters['Primary'] == posNotation[i]) | (self.hitters['Secondary'] == posNotation[i]))]),
+                                0, 13)
         needs[2] = 5 - len(self.rotation)
         needs[3] = 8 - len(self.bullpen)
         self.needs = needs
@@ -182,7 +209,7 @@ class Team:
         remBudget = round(remBudget, 1)
         if p > 1:
             print(remBudget)
-        if (self.needs[0]+self.needs[2]+self.needs[3]) * 2 > remBudget:
+        if (self.needs[0] + self.needs[2] + self.needs[3]) * 2 > remBudget:
             if p:
                 print('Out of Cash')
             for i in range(self.needs[0]):
@@ -221,10 +248,12 @@ class Team:
         avHitters.sort_values(['Value', 'OVR'], inplace=True, ascending=False)
         avSPs.sort_values(['Value', 'OVR'], inplace=True, ascending=False)
         avRPs.sort_values(['Value', 'OVR'], inplace=True, ascending=False)
+        if roundNum > 15:
+            print(avRPs)
         # print(avHitters.head())
         # print(avSPs.head())
         # print(avRPs.head())
-        hBundles = [None]*35
+        hBundles = [None] * 35
         for j in range(35):
             go = True
             tries = 1
@@ -247,6 +276,7 @@ class Team:
                             go = True
                     tries += 1
                 except ValueError:
+                    print(avHitters)
                     cur = list(avHitters['Name'])
                     while len(cur) < self.needs[0]:
                         dum = Hitter(nameGen(), '1B', hand=1, top=1)
@@ -265,20 +295,21 @@ class Team:
                     for i in cur:
                         val += i.value
                         cost += i.cost
-                        halfCost += max(round(i.cost/2, 1), 2)
+                        halfCost += max(round(i.cost / 2, 1), 2)
                 except ValueError:
                     cur = list(avHitters['Name'])
                     while len(cur) < self.needs[0]:
                         dum = Hitter(nameGen(), '1B', hand=1, top=1)
                         (dum.age, dum.secondary, dum.value, dum.cost) = (0, '1B', 0, 2)
-                        self.prospects.loc[len(self.prospects)] = [dum, dum.pos, dum.secondary, 1, dum.offense, dum.overall, 0]
+                        self.prospects.loc[len(self.prospects)] = [dum, dum.pos, dum.secondary, 1, dum.offense,
+                                                                   dum.overall, 0]
                         cur = cur + [dum]
                     for i in cur:
                         val += i.value
                         cost += i.cost
                         halfCost += max(round(i.cost / 2, 1), 2)
             elif tries > 250:
-                cur = ([None]*self.needs[0]) + [0, math.inf, math.inf]
+                cur = ([None] * self.needs[0]) + [0, math.inf, math.inf]
             hBundles[j] = cur + [val, cost, halfCost]
         spBundles = [None] * 25
         for j in range(25):
@@ -290,8 +321,9 @@ class Team:
                 for i in cur:
                     val += i.value
                     cost += i.cost
-                    halfCost += max(round(i.cost/2, 1), 2)
+                    halfCost += max(round(i.cost / 2, 1), 2)
             except ValueError:
+                print(avSPs)
                 cur = list(avSPs['Name'])
                 while len(cur) < self.needs[2]:
                     dum = Pitcher(nameGen(), 'SP', hand=1, top=1)
@@ -315,11 +347,13 @@ class Team:
                     cost += i.cost
                     halfCost += max(round(i.cost / 2, 1), 2)
             except ValueError:
+                print(avRPs)
                 cur = list(avRPs['Name'])
                 while len(cur) < self.needs[3]:
                     dum = Pitcher(nameGen(), 'RP', hand=1, top=1)
                     (dum.age, dum.value, dum.cost) = (0, 0, 2)
                     cur = cur + [dum]
+                    print(cur, 'after dummy added')
                 for i in cur:
                     val += i.value
                     cost += i.cost
@@ -332,13 +366,13 @@ class Team:
         for i in hBundles:
             for j in spBundles:
                 for k in rpBundles:
-                    if i[-2]+j[-2]+k[-2] <= remBudget:
-                        val = i[-3]+j[-3]+k[-3]
-                        if val>bestValue:
+                    if i[-2] + j[-2] + k[-2] <= remBudget:
+                        val = i[-3] + j[-3] + k[-3]
+                        if val > bestValue:
                             bestValue = val
                             offers = i[:-3] + j[:-3] + k[:-3]
-                    if i[-1]+j[-1]+k[-1] <= remBudget:
-                        val = i[-3]+j[-3]+k[-3]
+                    if i[-1] + j[-1] + k[-1] <= remBudget:
+                        val = i[-3] + j[-3] + k[-3]
                         if val > halfValue:
                             halfValue = val
                             halfOffers = i[:-3] + j[:-3] + k[:-3]
@@ -346,7 +380,8 @@ class Team:
             conLen = 3 if i.age == 1 else random.randrange(1, 5)
             i.offers.append([self, conLen, i.cost])
             if isinstance(i, Hitter) and p > 1:
-                print(self.name, 'offer a', conLen, 'year,', i.cost, 'AAV contract to', i.pos+'/'+i.secondary, i.smallLine())
+                print(self.name, 'offer a', conLen, 'year,', i.cost, 'AAV contract to', i.pos + '/' + i.secondary,
+                      i.smallLine())
             elif p > 1:
                 print(self.name, 'offer a', conLen, 'year,', i.cost, 'AAV contract to', i.pos, i.smallLine())
         if len(offers) == 0 and len(halfOffers) > 0:
@@ -357,20 +392,32 @@ class Team:
                 halfCostCur = max(round(i.cost / 2, 1), 2)
                 i.offers.append([self, conLen, halfCostCur])
                 if isinstance(i, Hitter) and p > 1:
-                    print(self.name, 'offer a', conLen, 'year,', halfCostCur, 'AAV contract to', i.pos + '/' + i.secondary,
+                    print(self.name, 'offer a', conLen, 'year,', halfCostCur, 'AAV contract to',
+                          i.pos + '/' + i.secondary,
                           i.smallLine())
                 elif p > 1:
                     print(self.name, 'offer a', conLen, 'year,', halfCostCur, 'AAV contract to', i.pos, i.smallLine())
 
     def setValue(self, player, roundNum):
         if isinstance(player, Hitter):
-            return max(round(((self.values[0]*player.con) + (self.values[1]*player.pow) + (self.values[2]*player.vis) +
-                    (self.values[3]*.5*(player.field+player.speed))) * (.9**roundNum), 1), 2)
+            return max(
+                round(((self.values[0] * player.con) + (self.values[1] * player.pow) + (self.values[2] * player.vis) +
+                       (self.values[3] * .5 * (player.field + player.speed))) * (.9 ** roundNum), 1), 2)
         elif isinstance(player, Pitcher):
-            return max(round(((self.values[4] * player.cont) + (self.values[5] * player.velo) + (self.values[6] * player.move) +
-                    (self.values[7] * .5 * (player.field + player.speed))) * (.9**roundNum), 1), 2)
+            return max(round(
+                ((self.values[4] * player.cont) + (self.values[5] * player.velo) + (self.values[6] * player.move) +
+                 (self.values[7] * .5 * (player.field + player.speed))) * (.9 ** roundNum), 1), 2)
         else:
             print('no')
+
+    def usageReset(self):
+        for i in self.hitters['Name']:
+            i.available = True
+            i.usage = 0
+        for i in self.bullpen['Name']:
+            i.available = True
+            i.usage = 0
+        self.lineupCard.rotMarker = 0
 
 
 class Lineup:  # Lineup card, gets called within the game
@@ -395,10 +442,15 @@ class Lineup:  # Lineup card, gets called within the game
         for i in self.dAlign:
             if i.controlled:
                 answer = i
+        for i in self.bullpen[self.bullpen['Available'] == True].Name:
+            if i.controlled:
+                answer = i
         return answer
 
     def printout(self):  # Shows starting lineups
-        print(self.ABR, pandas.concat([self.battingOrder, pandas.DataFrame([[self.dAlign[1], 'SP', self.dAlign[1].overall, self.dAlign[1].ERA]], columns=['Name', 'Position', 'Offense', 'OPS'])], ignore_index=True))
+        print(pandas.concat([self.battingOrder, pandas.DataFrame(
+            [[self.dAlign[1], 'SP', self.dAlign[1].overall, self.dAlign[1].ERA]],
+            columns=['Name', 'Position', 'Offense', 'OPS'])], ignore_index=True))
         # print(self.bullpen)
 
     def statsUP(self):
@@ -409,7 +461,7 @@ class Lineup:  # Lineup card, gets called within the game
         for i in self.bullpen['Name']:
             i.calcStats()
 
-    def usage(self):
+    def usage(self, playoff=False):
         for i in self.bullpen['Name']:
             i.available = True
             if i in self.relieversUsed:
@@ -427,8 +479,10 @@ class Lineup:  # Lineup card, gets called within the game
                 i.usage = 0
             for j in range(i.usage):
                 restDay.append(i)
-        rester = random.choice(restDay)
-        rester.available = False
+        size = 1 if playoff else 2
+        resters = random.sample(restDay, k=size)
+        for i in resters:
+            i.available = False
         # print(self.ABR, rester.usage, rester, 'taking tomorrow off.')
 
 
@@ -436,6 +490,8 @@ class ASTeam:  # This felt like hacking my own code to make a game play with fak
     def __init__(self, name, ABR, defense, hitters, bullpen):
         self.name = name
         self.ABR = ABR
+        self.defense = defense
+        self.bullpen = bullpen
         self.lineupCard = ASLineup(defense, hitters, bullpen, ABR)
         self.played = 0
         self.wins = 0
@@ -445,10 +501,16 @@ class ASTeam:  # This felt like hacking my own code to make a game play with fak
         self.controlled = False
 
     def record(self):
-        return '('+str(self.wins)+'-'+str(self.played-self.wins)+')'
+        return '(' + str(self.wins) + '-' + str(self.played - self.wins) + ')'
 
     def setLineup(self):
         pass
+
+    def setTeam(self):
+        for z in self.defense:
+            z.team = self.ABR
+        for z in self.bullpen['Name']:
+            z.team = self.ABR
 
     def __str__(self):
         return self.name
@@ -461,17 +523,16 @@ class ASLineup:
         self.battingOrder = hitters
         self.bullpen = bullpen
         self.relieversUsed = []
-
+        self.starters = None
 
     def printout(self):
-        #pandas.DataFrame(columns=['Name', 'Position', 'Offense', 'OPS'])
-        print(pandas.concat([self.battingOrder, pandas.DataFrame([[self.dAlign[1], self.dAlign[1].team, 'SP', self.dAlign[1].overall, self.dAlign[1].ERA]], columns=['Name', 'Team', 'Position', 'Offense', 'OPS'])], ignore_index=True))
+        print(self.starters)
         print(self.bullpen)
 
     def statsUP(self):
         pass
 
-    def usage(self):  # AS teams don't give rest days
+    def usage(self, playoff=False):  # AS teams don't give rest days
         pass
 
     def containsControlled(self):

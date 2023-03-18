@@ -52,7 +52,7 @@ def nameGen():  # Male for MLB realism but... I might get rid of it, I did for B
     return names.get_full_name(gender='male')
 
 
-def ageCurve(age, base=False):
+def ageCurve(age, base=False, controlled=False):
     if base:
         if age < 5:
             return age-1
@@ -60,37 +60,134 @@ def ageCurve(age, base=False):
             return 3
         else:
             return 8 - age
-    else:
+    elif not controlled:
         if age < 5:
             return 1
         elif age == 5:
             return 0
         else:
             return -1
+    else:
+        if age < 5:
+            return 2
+        elif age == 5:
+            return 0
+        else:
+            return -1
+
+
+def locString(cp, hand):
+    res = ''
+    if -.875 <= cp[0] <= .875 and 1.5 <= cp[1] <= 3.5:
+        res += 'IN: '
+    else:
+        res += 'OUT: '
+    if cp[1] < 2.1:
+        res += 'Down-'
+    elif cp[1] > 2.9:
+        res += 'Up-'
+    else:
+        res += 'Middle-'
+    if (cp[0] < -.375 and hand == -1) or (cp[0] > .375 and hand == 1):
+        res += 'In'
+    elif (cp[0] < -.375 and hand == 1) or (cp[0] > .375 and hand == -1):
+        res += 'Away'
+    else:
+        res += 'Middle'
+    return res
+
+
+def contactString(ev, la, da):
+    res = ''
+    if ev > 90 * mphTOfts:
+        res += 'Hard-Hit '
+    elif ev < 60:
+        res += 'Weakly-Hit '
+    if la < 10:
+        res += 'Grounder '
+    elif la > 25:
+        res += 'Fly Ball '
+    else:
+        res += 'Line Drive '
+    if da < 0:
+        res += 'foul down RF line'
+    elif da < 18:
+        res += 'towards RF'
+    elif da < 36:
+        res += 'towards RCF'
+    elif da < 54:
+        res += 'towards CF'
+    elif da < 72:
+        res += 'towards LCF'
+    elif da < 90:
+        res += 'towards LF'
+    else:
+        res += 'foul down LF line'
+    return res
+
+
+def throwStr(throw):
+    if throw == 0:
+        return 'Home Plate'
+    elif throw == 1:
+        return 'First Base'
+    elif throw == 2:
+        return 'Second Base'
+    elif throw == 3:
+        return 'Third Base'
+    elif throw == 4:
+        return 'Pitcher'
+    elif throw == 5:
+        return 'Second Base (No play)'
+
+
+def swingString(z, o, c):
+    res = ''
+    if z >= 3.5:
+        res += 'Way out in front, '
+    elif z > 1:
+        res += 'Early, '
+    elif z < -1:
+        res += 'Late, '
+    elif z < -3:
+        res += 'Way behind, '
+    else:
+        res += 'On it, '
+    if c < 1:
+        res += 'whiff'
+    elif c < 5:
+        res += 'bad contact'
+    elif c < 10:
+        res += 'good contact'
+    else:
+        res += 'great contact'
+    return res
 
 
 gravForce = -32.2  # in ft
 mphTOfts = 1.467  # ft/s = 1.467 * mph
 rubberToPlate = 60.5  # Pitcher's back foot is touching the rubber
-split = .01  # How much time (sec) passes in between snapshots... kinda like a frame rate
+split = .025  # How much time (sec) passes in between snapshots... kinda like a frame rate
 bounceCo = .325  # This doesn't actually get used but someday it might
 frictionDecel = -1.63  # Coefficient of Friction is .35... cuz I said so
 SPstam = 50  # Gets added to/subtracted from based on game events, when 0 the P gets subbed
 RPstam = 15  # Starters go longer than relievers
+baseRunning = 20
+baseRange = 290
 # [X-Accel, Y-Accel, Z-Velo, Baseline X, Baseline Y] baselines will be adjusted by Pitcher.
 # This is for righties, lefties will flip Xs. Gravity gets added to Y-accel later
 # SUUUPER Tentative... becoming less tentative
 pitches = {'4SFB': [-2, 16, 90 * mphTOfts, -.3, 3], '2SFB': [-12, 4, 87 * mphTOfts, -.75, 2.5],
-           '12-6': [2, -20, 75 * mphTOfts, 0, 1.5], 'SLID': [32, -8, 83 * mphTOfts, 1, 2],
+           '12-6': [2, -20, 75 * mphTOfts, 0, 1.5], 'SLID': [24, -8, 83 * mphTOfts, 1, 2],
            'CUT ': [12, -4, 85 * mphTOfts, .5, 2.7], 'SPLT': [-12, -8, 84 * mphTOfts, 0, 1.2],
-           'SINK': [-6, 2, 89 * mphTOfts, 0, 2], 'SCRW': [-24, -16, 70 * mphTOfts, -.875, 1.2],
+           'SINK': [-6, 2, 89 * mphTOfts, 0, 2], 'SCRW': [-20, -12, 70 * mphTOfts, -.875, 1.2],
            'CHG ': [-12, -10, 81 * mphTOfts, -.5, 2]}
 fastballs = {'4SFB': [-2, 16, 90 * mphTOfts, -.3, 3], '2SFB': [-12, 4, 87 * mphTOfts, -.75, 2.5],
              'SINK': [-6, 2, 89 * mphTOfts, 0, 2]}
 midRange = {'12-6': [2, -20, 75 * mphTOfts, 0, 1.5], 'CUT ': [12, -4, 85 * mphTOfts, .5, 2.7],
             'CHG ': [-12, -10, 81 * mphTOfts, -.5, 2]}
-chasers = {'SLID': [32, -8, 83 * mphTOfts, 1, 2], 'SPLT': [-12, -8, 84 * mphTOfts, 0, 1.2],
-           'SCRW': [-24, -16, 70 * mphTOfts, -.875, 1.2]}
+chasers = {'SLID': [24, -8, 83 * mphTOfts, 1, 2], 'SPLT': [-12, -8, 84 * mphTOfts, 0, 1.2],
+           'SCRW': [-20, -12, 70 * mphTOfts, -.875, 1.2]}
 
 
 # IN: 4SFB, CUT, 2SFB, SINK, CHG, 12-6 (really more 50/50)

@@ -23,13 +23,15 @@ from Players import *
 from DirectoryWide import *
 from Testing import *
 
+"""
 #bigtest()
 #bigtest2()
 #bigtest3()
 #bigtest4H()
 #bigtest4P()
 #bigtest5()
-#"""
+bigtest6()
+"""
 print('Values Key: [Contact, Power, Vision, Hitter Field/Speed, Control, Velocity, Movement, Pitcher Field/Speed]')
 for j in Divisions:
     for i in j:
@@ -37,14 +39,17 @@ for j in Divisions:
     print()
 year = 1
 print('Loading rosters... (Ignore any warning lines)')
+cur = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
 while year <= 5:
     print(str(20*(year-1))+'%')
-    cur = offseason(year, 0)
+    holdovers = holdUpdate(cur)
+    cur = offseason(year, 0, holdovers)
     year += 1
 print('100%')
 go = 'True'
 offP = 1
-user = userStartup()
+userStartup()
+#format2()
 while go:
     if schedLength in ['2', '162']:  # This is the kickoff for the whole thing
         playIt(schedule162)
@@ -52,9 +57,11 @@ while go:
         playIt(schedule20)
     else:
         playIt(schedule52)
-    offseason(year, offP)
+    holdovers = holdUpdate(cur)
+    cur = offseason(year, offP, holdovers)
     year += 1
     go = input('Input anything to play another season, just hit enter to stop')
+    #go = False
 print('Thanks for playing :)')
 # with pandas.ExcelWriter('Cscore_Pow_Res.xlsx') as writer:
 #     testerDF.to_excel(writer)

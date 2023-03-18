@@ -40,14 +40,14 @@ def userStartup():
             team = random.choice(NLt + ALt)
         if player.pos == 'SP':
             team.rotation.reset_index(drop=True, inplace=True)
-            team.rotation.loc[4] = numpy.array([player, player.hand, player.arsenal, player.overall, player.release,
-                                                player.extension, player.available], dtype=object)
+            team.rotation.loc[4] = numpy.array([player, player.hand, player.arStr, player.overall,
+                                                player.extension], dtype=object)
             team.rotation.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
             print(team)
             print(team.rotation)
         else:
             team.bullpen.reset_index(drop=True, inplace=True)
-            team.bullpen.loc[7] = numpy.array([player, player.hand, player.arsenal, player.overall, player.release,
+            team.bullpen.loc[7] = numpy.array([player, player.hand, player.arStr, player.overall,
                                                player.extension, player.available], dtype=object)
             team.bullpen.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
             print(team)
@@ -77,11 +77,11 @@ def buildAPitcher(pos):
     handPick = input('Input anything for Left Handed, just hit enter for Right Handed')
     hand = 1 if handPick else -1
     arsenal = []
-    print('You will get 4 Pitches')
+    print('You will get 2 Pitches')
     for i in range(len(list(pitches.keys()))):
         if list(pitches.keys())[i] not in arsenal:
             print(i, list(pitches.keys())[i])
-    for i in range(4):
+    for i in range(2):
         pick = int(input('Input the number corresponding to the pitch you want'))
         arsenal.append(list(pitches.keys())[pick])
     print(arsenal)

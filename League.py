@@ -1,10 +1,13 @@
+import pandas
 from Gameplay import *
 from Team import *
 from DirectoryWide import *
 import numpy
 
-schedLength = input('How many games per season would you like? (20, 52, 162)')  # 0 is 20, 1 and '' is 52, 2 is 162
-playoffSize = input('What playoff format would you like? (8, 10, 12, DE)')  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
+#schedLength = input('How many games per season would you like? (20, 52, 162)')  # 0 is 20, 1 and '' is 52, 2 is 162
+#playoffSize = input('What playoff format would you like? (8, 10, 12, DE)')  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
+schedLength = '162'
+playoffSize = 'DE'
 
 seriesHome = [None, [0], [0, 0, 0], [0, 0, 1, 1, 0], [0, 0, 1, 1, 1, 0, 0]]
 # First index is series length (in wins needed), second index: 0 means better seed hosts game, 1 means worse seed
@@ -38,7 +41,10 @@ Divisions = [NLEt, NLCt, NLWt, ALEt, ALCt, ALWt]
 Standings = [NLEs, NLCs, NLWs, ALEs, ALCs, ALWs]
 NLt = NLEt+NLCt+NLWt
 ALt = ALEt+ALCt+ALWt
+NLs = pandas.concat([NLEs, NLCs, NLWs])
+ALs = pandas.concat([ALEs, ALCs, ALWs])
 Leagues = [NLt, ALt]
+MLBt = NLt + ALt
 # INTER LEAGUE
 geoRivals = [(NLEt[0], ALEt[4]), (NLEt[1], ALEt[0]), (NLEt[2], ALEt[3]), (NLEt[3], ALEt[1]), (NLEt[4], ALEt[2]),
              (NLCt[0], ALCt[2]), (NLCt[1], ALCt[1]), (NLCt[2], ALCt[3]), (NLCt[3], ALCt[4]), (NLCt[4], ALCt[0]),
@@ -131,9 +137,13 @@ for i in range(177):
 
 # 20 Game Schedule - 2 Geo Rival + 8 divisional + 10 non divisional same league, Home = Away not promised
 schedule20 = geoRivalsFinal + geoRivals2Final + divisionalSlates + leagueSlates
+random.shuffle(schedule20)
 #"""
 
+
 def series(top, bot, l, pri=1, losers=False, wins=False):  # Top seed, bottom seed, games needed to win, print value
+    top.usageReset()
+    bot.usageReset()
     if wins:
         if bot.wins > top.wins:  # We are going to flip em
             hold = bot
@@ -164,7 +174,7 @@ def series(top, bot, l, pri=1, losers=False, wins=False):  # Top seed, bottom se
 
 def playIt(schedule):  # Plays the regular season
     for i in range(len(schedule)):
-        if i == len(schedule)//2:
+        if i == (len(schedule)//6)*3:
             print('HALFWAY STANDINGS')
             for k in Standings:
                 k['Played'] = [j.played for j in k['Team']]
@@ -173,13 +183,18 @@ def playIt(schedule):  # Plays the regular season
                 k['WPCT'] = (1000 * k['Wins']) // k['Played']
                 k['Run D'] = [(j.runsFor - j.runsAgainst) for j in k['Team']]
                 k.sort_values(['WPCT', 'Run D'], inplace=True, ascending=False)  # irl tiebreak is H2H
+                k.reset_index(drop=True, inplace=True)
                 print(k)
             print('ALL-STAR BREAK')
             WSHost = allstarGame(int(schedLength)//2)  # Winner of the ASG gets top seed in WS
+            for dkajfhdkfh in NLt+ALt:  # i got annoyed
+                dkajfhdkfh.setTeam()
         print('SLATE', i+1)
+        slateScores = []
         for j in schedule[i]:
             if j[0] and j[1]:
-                game(j[0], j[1], p=0)
+                slateScores.append(game(j[0], j[1], p=3))
+        print(slateScores)
     endOfYear(int(schedLength))  # Stats Leaders
     print('DIVISION STANDINGS')
     for i in Standings:
@@ -190,14 +205,18 @@ def playIt(schedule):  # Plays the regular season
         i['Run D'] = [(j.runsFor - j.runsAgainst) for j in i['Team']]
         i.sort_values(['Wins', 'Run D'], inplace=True, ascending=False)
         i.iloc[0]['Team'].winDivision = True  # Secures playoff spot
+        i.reset_index(drop=True, inplace=True)
         print(i)
-    NLs = pandas.concat([NLEs, NLCs, NLWs])
-    NLs['D. Winner'] = [j.winDivision for j in NLs['Team']]
-    NLs.sort_values(['WPCT', 'Run D'], inplace=True, ascending=False)
-    ALs = pandas.concat([ALEs, ALCs, ALWs])
-    ALs['D. Winner'] = [j.winDivision for j in ALs['Team']]
-    ALs.sort_values(['WPCT', 'Run D'], inplace=True, ascending=False)
     print('LEAGUE STANDINGS')
+    for i in [NLs, ALs]:
+        i['Played'] = [j.played for j in i['Team']]
+        i['Wins'] = [j.wins for j in i['Team']]
+        i['Losses'] = i['Played'] - i['Wins']
+        i['WPCT'] = (1000 * i['Wins']) // i['Played']
+        i['Run D'] = [(j.runsFor - j.runsAgainst) for j in i['Team']]
+        i['D. Winner'] = [j.winDivision for j in i['Team']]
+        i.sort_values(['D. Winner', 'WPCT', 'Run D'], inplace=True, ascending=False)
+        i.reset_index(drop=True, inplace=True)
     print(NLs)
     print(ALs)
     if playoffSize in ['0', '8']:
@@ -422,6 +441,8 @@ def allstarGame(gp):  # I thought it would be fun
     NLbatting.loc[len(NLbatting)] = [NLdh, NLdh.team, 'DH', NLdh.offense, NLdh.OPS]
     NLbatting.sort_values(['Offense', 'OPS'], ascending=False, inplace=True)
     NLAllStars = ASTeam('National League AS   ', 'NLA', NLdefense, NLbatting, NLbullpen)
+    NLAllStars.lineupCard.starters = pandas.concat([NLbatting, pandas.DataFrame([[NLstarter, NLstarter.team, 'SP',
+        NLstarter.overall, NLstarter.ERA]], columns=['Name', 'Team', 'Position', 'Offense', 'OPS'])], ignore_index=True)
     # AL
     ALdefense = [None] * 10
     ALbatting = pandas.DataFrame(columns=['Name', 'Team', 'Position', 'Offense', 'OPS'])
@@ -438,8 +459,12 @@ def allstarGame(gp):  # I thought it would be fun
     ALbatting.loc[len(ALbatting)] = [ALdh, ALdh.team, 'DH', ALdh.offense, ALdh.OPS]
     ALbatting.sort_values(['Offense', 'OPS'], ascending=False, inplace=True)
     ALAllStars = ASTeam('American League AS   ', 'ALA', ALdefense, ALbatting, ALbullpen)
+    ALAllStars.lineupCard.starters = pandas.concat([ALbatting, pandas.DataFrame([[ALstarter, ALstarter.team, 'SP',
+        ALstarter.overall, ALstarter.ERA]],columns=['Name', 'Team', 'Position','Offense', 'OPS'])],ignore_index=True)
     # Play the game
     ASTeams = [NLAllStars, ALAllStars]
+    for i in ASTeams:
+        i.setTeam()
     random.shuffle(ASTeams)
     game(ASTeams[0], ASTeams[1], p=2)
     if NLAllStars.wins > 0:
@@ -452,14 +477,20 @@ def allstarGame(gp):  # I thought it would be fun
 
 def endOfYear(gp):
     (NLh, NLp, ALh, ALp) = buildPDFs()
+    # pitchers
     NLp['IP'] = [i.IP for i in list(NLp['Name'])]
     NLp['ERA'] = [i.ERA for i in list(NLp['Name'])]
+    NLp['W'] = [i.W for i in list(NLp['Name'])]
+    NLp['S'] = [i.S for i in list(NLp['Name'])]
     NLp['WHIP'] = [i.WHIP for i in list(NLp['Name'])]
     NLp['K%'] = [i.Kp for i in list(NLp['Name'])]
     ALp['IP'] = [i.IP for i in list(ALp['Name'])]
     ALp['ERA'] = [i.ERA for i in list(ALp['Name'])]
+    ALp['W'] = [i.W for i in list(ALp['Name'])]
+    ALp['S'] = [i.S for i in list(ALp['Name'])]
     ALp['WHIP'] = [i.WHIP for i in list(ALp['Name'])]
     ALp['K%'] = [i.Kp for i in list(ALp['Name'])]
+    # hitters
     NLh['PA'] = [i.PA for i in list(NLh['Name'])]
     NLh['HR'] = [i.HR for i in list(NLh['Name'])]
     NLh['OPS'] = [i.OPS for i in list(NLh['Name'])]
@@ -476,6 +507,10 @@ def endOfYear(gp):
     print(NLp[NLp['IP'] >= gp].head())
     NLp.sort_values(['ERA'], inplace=True, ascending=True)
     print(NLp[NLp['IP'] >= gp].head())
+    NLp.sort_values(['W'], inplace=True, ascending=False)
+    print(NLp[NLp['IP'] >= gp].head())
+    NLp.sort_values(['S'], inplace=True, ascending=False)
+    print(NLp[NLp['IP'] >= gp].head())
     NLp.sort_values(['WHIP'], inplace=True, ascending=True)
     print(NLp[NLp['IP'] >= gp].head())
     NLp.sort_values(['K%'], inplace=True, ascending=False)
@@ -484,6 +519,10 @@ def endOfYear(gp):
     ALp.sort_values(['IP'], inplace=True, ascending=False)
     print(ALp[ALp['IP'] >= gp].head())
     ALp.sort_values(['ERA'], inplace=True, ascending=True)
+    print(ALp[ALp['IP'] >= gp].head())
+    ALp.sort_values(['W'], inplace=True, ascending=False)
+    print(ALp[ALp['IP'] >= gp].head())
+    ALp.sort_values(['S'], inplace=True, ascending=False)
     print(ALp[ALp['IP'] >= gp].head())
     ALp.sort_values(['WHIP'], inplace=True, ascending=True)
     print(ALp[ALp['IP'] >= gp].head())
@@ -585,13 +624,14 @@ def bracket(teams):  # Derpy as hell but I like how it looks this way
         print(teams[5].ABR + '|')
 
 
-def offseason(year, p):
+def offseason(year, p, holdovers):
     freeAgents = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
     pDeals = 0
     for i in NLt+ALt:
         teamFAs = i.reset()
         freeAgents = pandas.concat([freeAgents, teamFAs], ignore_index=True)
         i.prospectsAvailable()
+    freeAgents = pandas.concat([freeAgents, holdovers])
     go = True
     roundNum = 0
     while go:
@@ -639,7 +679,21 @@ def offseason(year, p):
         i.hitters.sort_values(['Overall', 'Offense'], inplace=True, ascending=False)
         i.rotation.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
         i.bullpen.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
-    return roundNum - 1
+        i.setTeam()
+        i.lineupCard = Lineup(i.rotation, i.hitters, i.ABR)
+    return freeAgents[freeAgents['Age'] < 8]
+
+
+def holdUpdate(holdovers):
+    res = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
+    for i in holdovers['Name']:
+        i.age += 1
+        i.boost(ageCurve(i.age, i.controlled))
+        if isinstance(i, Hitter):
+            res.loc[len(res)] = [i, i.pos, i.secondary, i.age, i.offense, i.overall, 0]
+        else:
+            res.loc[len(res)] = [i, i.pos, i.secondary, i.age, i.overall, i.total, 0]
+    return res
 
 
 def buildPDFs():
@@ -673,6 +727,197 @@ def buildPDFs():
     return (NLh, NLp, ALh, ALp)
 
 
+# Different League Format
+def format2():
+    random.shuffle(MLBt)
+    for dkajfhdkfh in MLBt:  # i got annoyed
+        dkajfhdkfh.setTeam()
+    group1A = MLBt[0:5]
+    group1B = MLBt[5:10]
+    group1C = MLBt[10:15]
+    group1D = MLBt[15:20]
+    group1E = MLBt[20:25]
+    group1F = MLBt[25:30]
+    groups1 = [group1A, group1B, group1C, group1D, group1E, group1F]
+    gNames = ['Group A', 'Group B', 'Group C', 'Group D', 'Group E', 'Group F']
+    schedule = roundRobin(groups1)
+    print('ROUND 1')
+    R11 = [None] * 6
+    R12 = [None] * 6
+    R13 = [None] * 6
+    R14 = [None] * 6
+    R15 = [None] * 6
+    for i in range(6):
+        curStandings = pandas.DataFrame({'Team':groups1[i], 'Wins':[0]*5, 'RD':[0]*5})
+        print(gNames[i])
+        print(curStandings)
+        curSched = schedule[i*5:i*5 + 5]
+        for j in curSched:
+            for k in j:
+                if k[0] and k[1]:
+                    game(k[0], k[1], p=1)
+        for j in curSched:
+            for k in j:
+                if k[0] and k[1]:
+                    game(k[1], k[0], p=1)
+        curStandings['Wins'] = [z.wins for z in curStandings['Team']]
+        curStandings['RD'] = [z.runsFor - z.runsAgainst for z in curStandings['Team']]
+        curStandings.sort_values(['Wins', 'RD'], ascending=False, inplace=True, ignore_index=True)
+        print(curStandings)
+        R11[i] = curStandings.iloc[0].Team
+        R12[i] = curStandings.iloc[1].Team
+        R13[i] = curStandings.iloc[2].Team
+        R14[i] = curStandings.iloc[3].Team
+        R15[i] = curStandings.iloc[4].Team
+    print('Advanced:', *R11)  # 6/6 advance from here
+    print(*R12)  # 4/6 advance from here
+    print(*R13)  # 3/6 advance from here
+    print(*R14)  # 2/6 advance from here
+    print('Eliminated:', *R15)  # 0/6 advance from here
+    for i in MLBt:
+        i.softReset()
+    print('ROUND 2')
+    groups2 = [R12, R13, R14]
+    gNames2 = ['Second Place (4 Advance)', 'Third Place (3 Advance)', 'Fourth Place (2 Advance)']
+    schedule2 = roundRobin(groups2)
+    R2A = []
+    R2E = []
+    for i in range(3):
+        curStandings = pandas.DataFrame({'Team':groups2[i], 'Wins':[0]*6, 'RD':[0]*6})
+        print(gNames2[i])
+        print(curStandings)
+        curSched = schedule2[i*5:i*5 + 5]
+        for j in curSched:
+            for k in j:
+                if k[0] and k[1]:
+                    game(k[0], k[1], p=1)
+        for j in curSched:
+            for k in j:
+                if k[0] and k[1]:
+                    game(k[1], k[0], p=1)
+        curStandings['Wins'] = [z.wins for z in curStandings['Team']]
+        curStandings['RD'] = [z.runsFor - z.runsAgainst for z in curStandings['Team']]
+        curStandings.sort_values(['Wins', 'RD'], ascending=False, inplace=True, ignore_index=True)
+        print(curStandings)
+        for j in range(6):
+            if j < 4-i:
+                R2A.append(curStandings.iloc[j].Team)
+            else:
+                R2E.append(curStandings.iloc[j].Team)
+    print(*R2A)
+    print('Eliminated:', *R2E)
+    R3 = R2A + R11
+    for i in R3:
+        i.softReset()
+    random.shuffle(R2A)
+    group3A = R3[0:5]
+    group3B = R3[5:10]
+    group3C = R3[10:15]
+    groups3 = [group3A, group3B, group3C]
+    gNames3 = ['Group A', 'Group B', 'Group C']
+    schedule3 = roundRobin(groups3)
+    print('ROUND 3')
+    R31 = [None] * 3
+    R32 = [None] * 3
+    R33 = [None] * 3
+    R34 = [None] * 3
+    R35 = [None] * 3
+    for i in range(3):
+        curStandings = pandas.DataFrame({'Team':groups3[i], 'Wins':[0]*5, 'RD':[0]*5})
+        print(gNames3[i])
+        print(curStandings)
+        curSched = schedule3[i*5:i*5 + 5]
+        for j in curSched:
+            for k in j:
+                if k[0] and k[1]:
+                    game(k[0], k[1], p=1)
+        for j in curSched:
+            for k in j:
+                if k[0] and k[1]:
+                    game(k[1], k[0], p=1)
+        curStandings['Wins'] = [z.wins for z in curStandings['Team']]
+        curStandings['RD'] = [z.runsFor - z.runsAgainst for z in curStandings['Team']]
+        curStandings.sort_values(['Wins', 'RD'], ascending=False, inplace=True, ignore_index=True)
+        print(curStandings)
+        R31[i] = curStandings.iloc[0].Team
+        R32[i] = curStandings.iloc[1].Team
+        R33[i] = curStandings.iloc[2].Team
+        R34[i] = curStandings.iloc[3].Team
+        R35[i] = curStandings.iloc[4].Team
+    print('Advanced:', *R31)  # 3/3 advance from here
+    print('Advanced:', *R32)  # 3/3 advance from here
+    print(*R33)  # 1-2/3 advance from here
+    print(*R34)  # 1-2/3 advance from here
+    print('Eliminated:', *R35)  # 0/3 advance from here
+    print('ROUND 4')
+    group4 = R33 + R34
+    for i in group4:
+        i.softReset()
+    R4A = []
+    R4E = []
+    schedule4 = roundRobin([group4])
+    curStandings = pandas.DataFrame({'Team': group4, 'Wins': [0] * 6, 'RD': [0] * 6})
+    print(curStandings)
+    for j in schedule4:
+        for k in j:
+            if k[0] and k[1]:
+                game(k[0], k[1], p=1)
+    for j in schedule4:
+        for k in j:
+            if k[0] and k[1]:
+                game(k[1], k[0], p=1)
+    curStandings['Wins'] = [z.wins for z in curStandings['Team']]
+    curStandings['RD'] = [z.runsFor - z.runsAgainst for z in curStandings['Team']]
+    curStandings.sort_values(['Wins', 'RD'], ascending=False, inplace=True, ignore_index=True)
+    print(curStandings)
+    for i in range(6):
+        if i < 2:
+            R4A.append(curStandings.iloc[i].Team)
+        else:
+            R4E.append(curStandings.iloc[i].Team)
+    print(*R4A)
+    print('Eliminated:', *R4E)
+    print('ROUND 5')
+    R5 = R4A + R31 + R32
+    for i in R5:
+        i.softReset()
+    random.shuffle(R5)
+    group5A = R5[0:4]
+    group5B = R5[4:8]
+    groups5 = [group5A, group5B]
+    gNames5 = ['Group A', 'Group B']
+    schedule5 = roundRobin(groups5)
+    R5A = []
+    R5E = []
+    for i in range(2):
+        curStandings = pandas.DataFrame({'Team': groups5[i], 'Wins': [0] * 4, 'RD': [0] * 4})
+        print(gNames5[i])
+        print(curStandings)
+        curSched = schedule5[i * 3:i * 3 + 3]
+        for j in curSched:
+            for k in j:
+                if k[0] and k[1]:
+                    game(k[0], k[1], p=1)
+        for j in curSched:
+            for k in j:
+                if k[0] and k[1]:
+                    game(k[1], k[0], p=1)
+        curStandings['Wins'] = [z.wins for z in curStandings['Team']]
+        curStandings['RD'] = [z.runsFor - z.runsAgainst for z in curStandings['Team']]
+        curStandings.sort_values(['Wins', 'RD'], ascending=False, inplace=True, ignore_index=True)
+        print(curStandings)
+        for j in range(4):
+            if j == 0:
+                R5A.append(curStandings.iloc[j].Team)
+            else:
+                R5E.append(curStandings.iloc[j].Team)
+    print(*R5A)
+    print('Eliminated:', *R5E)
+    print('ROUND 6/WORLD SERIES')
+    random.shuffle(R5A)
+    WS = series(R5A[0], R5A[1], 4)
+    print(WS, 'WINS THE WORLD SERIES!!!')
+    endOfYear(15)
 
 
 

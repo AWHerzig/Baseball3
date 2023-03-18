@@ -34,10 +34,10 @@ def bigtest3():
 
 def bigtest4H():
     testing = pandas.DataFrame(columns=['Con', 'Pow', 'Vis', 'Speed', 'CP', 'CV', 'PV', 'ALL'])
-    hitters = [(0, 0, 0), (5, 5, 5), (10, 10, 10)]
+    pitchers = [(0, 0, 0), (5, 5, 5), (10, 10, 10)]
     for i in range(11):
-        pitchers = [(i, 5, 5, 5), (5, i, 5, 5), (5, 5, i, 5), (5, 5, 5, i), (i, i, 5, 5), (i, 5, i, 5), (5, i, i, 5), (i, i, i, i)]
-        testing.loc[i] = [test4(j, hitters[1]) for j in pitchers]
+        hitters = [(i, 5, 5, 5), (5, i, 5, 5), (5, 5, i, 5), (5, 5, 5, i), (i, i, 5, 5), (i, 5, i, 5), (5, i, i, 5), (i, i, i, i)]
+        testing.loc[i] = [test4(j, pitchers[0]) for j in hitters]
     print(testing)
 
 
@@ -47,7 +47,7 @@ def bigtest4P():
     for i in range(11):
         print(i)
         pitchers = [(i, 5, 5), (5, i, 5), (5, 5, i), (i, i, 5), (i, 5, i), (5, i, i), (i, i, i)]
-        testing.loc[i] = [test4(hitters[1], j) for j in pitchers]
+        testing.loc[i] = [test4(hitters[0], j) for j in pitchers]
     print(testing)
 
 
@@ -56,6 +56,14 @@ def bigtest5():
     for i in list(pitches.keys()):
         testing.loc[len(testing)] = test5(i)
     testing.set_index('pType', drop=True, inplace=True)
+    print(testing)
+
+
+def bigtest6():  # Each level of hitter plays specific level of pitcher and returns full outcome breakdown
+    testing = pandas.DataFrame(columns=['K', 'BB', 'HR', 'S', 'D', 'T', 'IPHR', 'Outs', 'OPS', 'BABIP'])
+    for i in range(11):
+        testing.loc[len(testing)] = test6(i)
+    print('hitter is 5, pitcher is 5, fielding is row')
     print(testing)
 
 
@@ -79,7 +87,7 @@ def test(hScore, pScore):  # Sims a bunch of innings and returns a stat like ERA
             pass
         #print('new inning')
         dlineup.dAlign[1].stamScore = 1000
-        inning(oLineup, dlineup, 'h', board)
+        inning(oLineup, dlineup, 'h', board, 0)
     hitter.calcStats()
     pitcher.calcStats()
     #print('Hitter:', hScore, 'Pitcher:', pScore)
@@ -200,7 +208,7 @@ def test4(hScore, pScore):  # Sims a bunch of innings and returns a stat like ER
             pass
         #print('new inning')
         dlineup.dAlign[1].stamScore = 1000
-        inning(oLineup, dlineup, 'h', board)
+        inning(oLineup, dlineup, 'h', board, 0)
     hitter.calcStats()
     pitcher.calcStats()
     #print('Hitter:', hScore, 'Pitcher:', pScore)
@@ -261,3 +269,58 @@ def test5(pType):  # Sims a bunch of PAs and returns breakdown of results
     SLG = ((4*HR)+S+(2*D)+(3*T)+(4*IPHR)) / (10000 - BB)
     BABIP = (S+D+T+IPHR) / (10000 - BB - K - HR)
     return [pType, int(K), int(BB), int(HR), int(S), int(D), int(T), int(IPHR), int(outs), int((OBP + SLG) * 1000), int(BABIP * 1000)]
+
+
+def test6(fScore):
+    # Offense
+    board = Scoreboard('STL', 0)
+    hitter = Hitter(nameGen(), 'H ')
+    #(hitter.con, hitter.pow, hitter.vis, hitter.field, hitter.speed) = (5, 5, 5, 5, 5)
+    (hitter.con, hitter.pow, hitter.vis, hitter.field, hitter.speed) = (10, 10, 10, 10, 10)
+    oLineup = Lineup(None, None, None)
+    oLineup.dAlign = [hitter] * 10
+    for i in range(9):
+        oLineup.battingOrder.loc[len(oLineup.battingOrder)] = [hitter, 'H ', 5 * 3, hitter.OPS]
+    # Defense
+    pitcher = Pitcher(nameGen(), 'P ', test=True)
+    (pitcher.cont, pitcher.velo, pitcher.move, pitcher.field, pitcher.speed) = (0, 0, 0, fScore, fScore)
+    dlineup = Lineup(None, None, None)
+    dlineup.dAlign = [pitcher] * 10
+    K = 0
+    BB = 0
+    HR = 0
+    S = 0
+    D = 0
+    T = 0
+    IPHR = 0
+    outs = 0
+    for i in range(10000):
+        board.refresh()
+        board.pitcher = pitcher
+        board.hitter = hitter
+        hitter.chargedTo = pitcher
+        res = PA(dlineup.dAlign, hitter, board)
+        if res == 'K':
+            K += 1
+        elif res == 'BB':
+            BB += 1
+        elif res == 'Home Run':
+            HR += 1
+        elif res[1] == 'single':
+            S += 1
+        elif res[1] == 'double':
+            D += 1
+        elif res[1] == 'triple':
+            T += 1
+        elif res[1] == 'IPHR':
+            IPHR += 1
+        elif res[1] == 'out':
+            outs += 1
+        else:
+            print(res, 'bruh')
+    AVG = (HR + S + D + T + IPHR) / (10000 - BB)
+    OBP = (HR + S + D + T + IPHR + BB) / 10000
+    SLG = ((4 * HR) + S + (2 * D) + (3 * T) + (4 * IPHR)) / (10000 - BB)
+    BABIP = (S + D + T + IPHR) / (10000 - BB - K - HR)
+    return [int(K), int(BB), int(HR), int(S), int(D), int(T), int(IPHR), int(outs), int((OBP + SLG) * 1000),
+            int(BABIP * 1000)]
