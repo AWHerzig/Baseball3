@@ -252,7 +252,7 @@ class Team:
             self.buildBundles(remBudget, avHitters, avSPs, avRPs, roundNum, p)
 
     def selfContracts(self, remBudget, avHitters, avSPs, avRPs, roundNum):
-        print('USER ROUND', roundNum)
+        print(*self.needs)
         avHitters['Contact'] = [i.con for i in avHitters['Name']]
         avHitters['Power'] = [i.pow for i in avHitters['Name']]
         avHitters['Vision'] = [i.vis for i in avHitters['Name']]
@@ -263,45 +263,62 @@ class Team:
         avSPs['Movement'] = [i.move for i in avSPs['Name']]
         avSPs['Fielding'] = [i.field for i in avSPs['Name']]
         avSPs['Speed'] = [i.speed for i in avSPs['Name']]
-        avSPs['Arsenal'] = [i.arsStr for i in avSPs['Name']]
+        avSPs['Arsenal'] = [i.arStr for i in avSPs['Name']]
         avRPs['Control'] = [i.cont for i in avRPs['Name']]
         avRPs['Velocity'] = [i.velo for i in avRPs['Name']]
         avRPs['Movement'] = [i.move for i in avRPs['Name']]
         avRPs['Fielding'] = [i.field for i in avRPs['Name']]
         avRPs['Speed'] = [i.speed for i in avRPs['Name']]
-        avRPs['Arsenal'] = [i.arsStr for i in avRPs['Name']]
+        avRPs['Arsenal'] = [i.arStr for i in avRPs['Name']]
         # your players
-        self.hitters['Contact'] = [i.con for i in self.hitters['Name']]
-        self.hitters['Power'] = [i.pow for i in self.hitters['Name']]
-        self.hitters['Vision'] = [i.vis for i in self.hitters['Name']]
-        self.hitters['Fielding'] = [i.field for i in self.hitters['Name']]
-        self.hitters['Speed'] = [i.speed for i in self.hitters['Name']]
-        self.rotation['Control'] = [i.cont for i in self.rotation['Name']]
-        self.rotation['Velocity'] = [i.velo for i in self.rotation['Name']]
-        self.rotation['Movement'] = [i.move for i in self.rotation['Name']]
-        self.rotation['Fielding'] = [i.field for i in self.rotation['Name']]
-        self.rotation['Speed'] = [i.speed for i in self.rotation['Name']]
-        self.bullpen['Control'] = [i.cont for i in self.bullpen['Name']]
-        self.bullpen['Velocity'] = [i.velo for i in self.bullpen['Name']]
-        self.bullpen['Movement'] = [i.move for i in self.bullpen['Name']]
-        self.bullpen['Fielding'] = [i.field for i in self.bullpen['Name']]
-        self.bullpen['Speed'] = [i.speed for i in self.bullpen['Name']]
+        hitters = self.hitters.copy()
+        rotation = self.rotation.copy()
+        bullpen = self.bullpen.copy()
+        hitters['Contact'] = [i.con for i in hitters['Name']]
+        hitters['Power'] = [i.pow for i in hitters['Name']]
+        hitters['Vision'] = [i.vis for i in hitters['Name']]
+        hitters['Fielding'] = [i.field for i in hitters['Name']]
+        hitters['Speed'] = [i.speed for i in hitters['Name']]
+        hitters['Age'] = [i.age for i in hitters['Name']]
+        hitters['Duration'] = [i.contract[0] for i in hitters['Name']]
+        hitters['Salary'] = [i.contract[1] for i in hitters['Name']]
+        rotation['Control'] = [i.cont for i in rotation['Name']]
+        rotation['Velocity'] = [i.velo for i in rotation['Name']]
+        rotation['Movement'] = [i.move for i in rotation['Name']]
+        rotation['Fielding'] = [i.field for i in rotation['Name']]
+        rotation['Speed'] = [i.speed for i in rotation['Name']]
+        rotation['Age'] = [i.age for i in rotation['Name']]
+        rotation['Duration'] = [i.contract[0] for i in rotation['Name']]
+        rotation['Salary'] = [i.contract[1] for i in rotation['Name']]
+        bullpen['Control'] = [i.cont for i in bullpen['Name']]
+        bullpen['Velocity'] = [i.velo for i in bullpen['Name']]
+        bullpen['Movement'] = [i.move for i in bullpen['Name']]
+        bullpen['Fielding'] = [i.field for i in bullpen['Name']]
+        bullpen['Speed'] = [i.speed for i in bullpen['Name']]
+        bullpen['Age'] = [i.age for i in bullpen['Name']]
+        bullpen['Duration'] = [i.contract[0] for i in bullpen['Name']]
+        bullpen['Salary'] = [i.contract[1] for i in bullpen['Name']]
         with pandas.ExcelWriter('UserFAs.xlsx') as writer:
             avHitters.to_excel(writer, sheet_name='FA Hitters')
             avSPs.to_excel(writer, sheet_name='FA Starters')
             avRPs.to_excel(writer, sheet_name='FA Relievers')
-            self.hitters.to_excel(writer, sheet_name='Your Hitters')
-            self.rotation.to_excel(writer, sheet_name='Your Starters')
-            self.bullpen.to_excel(writer, sheet_name='Your Relievers')
+            hitters.to_excel(writer, sheet_name='Your Hitters')
+            rotation.to_excel(writer, sheet_name='Your Starters')
+            bullpen.to_excel(writer, sheet_name='Your Relievers')
         going = True
+        toGo = self.needs.copy()
         while going:
+            print('Remaining Budget:', remBudget)
             going = input('Input anything to make an offer, blank to stop for the round')
             if not going:
                 break
             try:
-                print('Remaining Budget:', remBudget)
                 group = int(input('1 for hitter, 2 for SP, 3 for RP'))
                 if group == 1:
+                    toGo[0] -= 1
+                    if toGo[0] < 0:
+                        print('Already 13 hitters on roster/offered contract.')
+                        raise ValueError
                     loc = int(input('Input the key of hitter you wish to offer a contract'))
                     player = avHitters.loc[loc].Name
                     if player.age == 1:
@@ -312,6 +329,10 @@ class Team:
                         salary = int(input('AAV offer?'))
                         duration = int(input('How many years is the contract'))
                 elif group == 2:
+                    toGo[2] -= 1
+                    if toGo[2] < 0:
+                        print('Already 5 SPs on roster/offered contract.')
+                        raise ValueError
                     loc = int(input('Input the key of starter you wish to offer a contract'))
                     player = avSPs.loc[loc].Name
                     if player.age == 1:
@@ -322,6 +343,10 @@ class Team:
                         salary = int(input('AAV offer?'))
                         duration = int(input('How many years is the contract'))
                 elif group == 3:
+                    toGo[3] -= 1
+                    if toGo[3] < 0:
+                        print('Already 8 RPs on roster/offered contract.')
+                        raise ValueError
                     loc = int(input('Input the key of reliever you wish to offer a contract'))
                     player = avRPs.loc[loc].Name
                     if player.age == 1:

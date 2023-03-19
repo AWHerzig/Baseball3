@@ -24,9 +24,12 @@ def userStartup():
             player.budget = 300 + (200 * choiceB)
         except ValueError:
             pass
-        player.controlled = True
     else:
         player = None
+    return player
+
+
+def userStartup2(player):
     if isinstance(player, Hitter):
         user3 = input('Input anything to be able to pick your team, just hit enter to be assigned team')
         if user3:
@@ -59,17 +62,29 @@ def userStartup():
             team.bullpen.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
             print(team)
             print(team.bullpen)
-    return user1
+    elif isinstance(player, Team):
+        player.controlled = True
 
 
 def buildAHitter():
     name = input('What is your player\'s name? (Max 15 characters)')
-    pos1 = input('What is your primary position? (C, 1B, 2B, 3B, SS, LF, CF, RF)')
-    if pos1 == 'C':
-        pos1 = 'C '
-    pos2 = input('What is your secondary position? (C, 1B, 2B, 3B, SS, LF, CF, RF)')
-    if pos2 == 'C':
-        pos2 = 'C '
+    pos1 = None
+    pos2 = None
+    while pos1 is None and pos2 is None:
+        try:
+            pos1 = input('What is your primary position? (C, 1B, 2B, 3B, SS, LF, CF, RF)')
+            if pos1 == 'C':
+                pos1 = 'C '
+            pos2 = input('What is your secondary position? (C, 1B, 2B, 3B, SS, LF, CF, RF)')
+            if pos2 == 'C':
+                pos2 = 'C '
+            if pos1 not in posNotation and pos2 not in posNotation:
+                raise ValueError
+        except ValueError:
+            print('Faulty input... somewhere don\'t ask me')
+            pos1 = None
+            pos2 = None
+            continue
     handPick = input('Input anything for Left Handed, just hit enter for Right Handed')
     hand = 1 if handPick else -1
     player = Hitter(name, pos1, hand=hand, controlled=True)

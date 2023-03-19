@@ -114,8 +114,6 @@ def game(home, away, playoff=False, p=0, stam=SPstam):  # p is a print value tha
         board.user = hlineup.containsControlled()
         board.permP = max(board.p, 2)
     board.p = board.permP
-    print(home.ABR, *hlineup.dAlign)
-    print(away.ABR, *alineup.dAlign)
     if board.p >= 2:  # When showing every PA, I like to know the players positions and stuff, plus i think it's cool
         print(home.name, 'lineup', home.record())
         hlineup.printout()

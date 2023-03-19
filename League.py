@@ -4,10 +4,10 @@ from Team import *
 from DirectoryWide import *
 import numpy
 
-#schedLength = input('How many games per season would you like? (20, 52, 162)')  # 0 is 20, 1 and '' is 52, 2 is 162
-#playoffSize = input('What playoff format would you like? (8, 10, 12, DE)')  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
-schedLength = '162'
-playoffSize = 'DE'
+schedLength = input('How many games per season would you like? (20, 52, 162)')  # 0 is 20, 1 and '' is 52, 2 is 162
+playoffSize = input('What playoff format would you like? (8, 10, 12, DE)')  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
+#schedLength = '162'
+#playoffSize = 'DE'
 
 seriesHome = [None, [0], [0, 0, 0], [0, 0, 1, 1, 0], [0, 0, 1, 1, 1, 0, 0]]
 # First index is series length (in wins needed), second index: 0 means better seed hosts game, 1 means worse seed

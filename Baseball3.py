@@ -38,6 +38,7 @@ for j in Divisions:
         print(i.name, 'values', i.values, 'with a budget of', i.budget)
     print()
 year = 1
+starter = userStartup()
 print('Loading rosters... (Ignore any warning lines)')
 cur = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
 while year <= 5:
@@ -48,10 +49,10 @@ while year <= 5:
 print('100%')
 go = 'True'
 offP = 1  # print value for the offseason
-starter = userStartup()
+userStartup2(starter)
 #format2()
 while go:
-    if starter == '3':
+    if isinstance(starter, Team):
         holdovers = holdUpdate(cur)
         cur = offseason(year, offP, holdovers)
         year += 1
@@ -61,10 +62,14 @@ while go:
         playIt(schedule20)
     else:
         playIt(schedule52)
+    print()
+    go = input('Input anything to play another season, just hit enter to stop')
+    if not go:
+        break
+    print('OFFSEASON')
     holdovers = holdUpdate(cur)
     cur = offseason(year, offP, holdovers)
     year += 1
-    go = input('Input anything to play another season, just hit enter to stop')
     #go = False
 print('Thanks for playing :)')
 # with pandas.ExcelWriter('Cscore_Pow_Res.xlsx') as writer:
