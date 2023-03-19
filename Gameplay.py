@@ -106,12 +106,16 @@ def game(home, away, playoff=False, p=0, stam=SPstam):  # p is a print value tha
     if home.controlled or away.controlled:
         board.permP = max(board.p, 1)
     if alineup.containsControlled():
+        print('here')
         board.user = alineup.containsControlled()
         board.permP = max(board.p, 2)
     elif hlineup.containsControlled():
+        print('here')
         board.user = hlineup.containsControlled()
         board.permP = max(board.p, 2)
     board.p = board.permP
+    print(home.ABR, *hlineup.dAlign)
+    print(away.ABR, *alineup.dAlign)
     if board.p >= 2:  # When showing every PA, I like to know the players positions and stuff, plus i think it's cool
         print(home.name, 'lineup', home.record())
         hlineup.printout()
@@ -386,13 +390,21 @@ def PA(defense, hitter, board):
 def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the nitty-gritty
     # Pitch Selection
     if pitcher.controlled:
-        print(pitcher.arsenal)
+        print(*pitcher.presets)
         try:
-            choice = int(input('Which pitch do you want to throw, first is 0, second is 1, etc.'))
-            pType = pitcher.arsenal[choice]
+            choice = int(input('Which preset do you want to throw, first is 0, second is 1, etc. Blank for custom'))
+            preset = pitcher.presets[choice]
+            pType = preset[0]
         except ValueError or IndexError:  # If user messes up, so the entire thing doesnt come crashing down
-            pType = random.choice(pitcher.arsenal)
+            preset = None
+            print(*pitcher.arsenal)
+            try:
+                choiceA = int(input('Which pitch do you want to throw, first is 0, second is 1, etc.'))
+                pType = pitcher.arsenal[choiceA]
+            except:
+                pType = random.choice(pitcher.arsenal)
     else:
+        preset = None
         pType = random.choice(pitcher.arsenal)
     # print(pType)
     #pType = 'SPLT'
@@ -410,13 +422,16 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
         board.basepaths[1] = (20 + .5 * board.B1.speed) * (timeToPlate + .9)
     timeTraveled = 0
     if pitcher.controlled:
-        try:
-            xPick = float(input('X-coordinate aim?'))
-            yPick = float(input('Y-coordinate aim?'))
-            pAtt = [xPick, yPick]
-        except:
-            print('Bad input, hung it!')
-            pAtt = [0, 2.5]
+        if preset:
+            pAtt = preset[1:3]
+        else:
+            try:
+                xPick = float(input('X-coordinate aim?'))
+                yPick = float(input('Y-coordinate aim?'))
+                pAtt = [xPick, yPick]
+            except:
+                print('Bad input, hung it!')
+                pAtt = [0, 2.5]
     else:
         # pAtt = [baselines[3], baselines[4]]  # Standard spot for given pitch type
         # pAtt = [0, 2.5]
@@ -529,6 +544,7 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
         if oLevel:
             print(pType, crossPlate)
         else:
+            print(pType, crossPlate)
             print(pType, locString(crossPlate, hitter.hand))
     if swing is None:  # Swing Adjudication starts here. This is pitch taken
         if hitter.controlled:

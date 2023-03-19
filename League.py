@@ -193,7 +193,7 @@ def playIt(schedule):  # Plays the regular season
         slateScores = []
         for j in schedule[i]:
             if j[0] and j[1]:
-                slateScores.append(game(j[0], j[1], p=3))
+                slateScores.append(game(j[0], j[1], p=0))
         print(slateScores)
     endOfYear(int(schedLength))  # Stats Leaders
     print('DIVISION STANDINGS')

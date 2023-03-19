@@ -65,15 +65,19 @@ def ageCurve(age, base=False, controlled=False):
             return 1
         elif age == 5:
             return 0
-        else:
+        elif age < 8:
             return -1
+        else:
+            return -2
     else:
         if age < 5:
             return 2
         elif age == 5:
             return 0
-        else:
+        elif age < 8:
             return -1
+        else:
+            return -2
 
 
 def locString(cp, hand):

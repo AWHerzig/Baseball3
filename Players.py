@@ -38,6 +38,7 @@ class Pitcher:
         self.age = random.randrange(1, 4)
         self.contract = [4-self.age, 2]
         self.controlled = controlled
+        self.presets = []
         self.value = 0
         self.cost = 0
         self.offers = []
@@ -106,28 +107,100 @@ class Pitcher:
         self.offers = []
 
     def boost(self, x):
-        if self.controlled:
+        if not self.controlled:
             self.cont += x
             self.velo += x
             self.move += x
             self.field += x
             self.speed += x
         else:
-            self.cont += x
-            self.velo += x
-            self.move += x
-            self.field += x
-            self.speed += x
+            if x > 0:
+                bank = x * 4
+                newP = input('Input anything to spend 2 on learning a new pitch, blank to pass')
+                if newP and bank >= 2:
+                    bank -= 2
+                    print('you have:', self.arsenal)
+                    for i in range(len(list(pitches.keys()))):
+                        if list(pitches.keys())[i] not in self.arsenal:
+                            print(i, list(pitches.keys())[i])
+                    pre = True
+                    while pre:
+                        pre = input('Input anything to add a preset, nothing to skip')
+                        if not pre:
+                            break
+                        print(player.arsenal)
+                        try:
+                            choice = int(input('Which pitch do you want to use, first is 0, second is 1, etc.'))
+                            pType = player.arsenal[choice]
+                        except ValueError or IndexError:  # If user messes up, so the entire thing doesnt come crashing down
+                            print('bad input')
+                            continue
+                        try:
+                            xPick = float(input('X-coordinate aim?'))
+                            yPick = float(input('Y-coordinate aim?'))
+                        except ValueError:
+                            print('bad input')
+                            continue
+                        player.presets.append([pType, xPick, yPick])
+                    try:
+                        pick = int(input('Input the number corresponding to the pitch you want'))
+                        self.arsenal.append(list(pitches.keys())[pick])
+                        self.arStr = ''
+                        for i in self.arsenal:
+                            self.arStr = self.arStr + i[0:2]
+                    except IndexError or ValueError:
+                        print('u did it wrong chump, take ur money back')
+                        bank += 2
+                control = int(input('Bank Remaining: ' + str(bank) + '. How many towards control?'))
+                if control > bank:
+                    control = bank
+                bank -= control
+                velocity = int(input('Bank Remaining: ' + str(bank) + '. How many towards velocity?'))
+                if velocity > bank:
+                    velocity = bank
+                bank -= velocity
+                movement = int(input('Bank Remaining: ' + str(bank) + '. How many towards movement?'))
+                if movement > bank:
+                    movement = bank
+                bank -= movement
+                fielding = int(input('Bank Remaining: ' + str(bank) + '. How many towards fielding (double value)?'))
+                if fielding > bank:
+                    fielding = bank
+                bank -= fielding
+                speed = int(input('Bank Remaining: ' + str(bank) + '. How many towards speed (double value)?'))
+                if speed > bank:
+                    speed = bank
+                bank -= speed
+                self.cont += control
+                self.velo += velocity
+                self.move += movement
+                self.field += fielding * 2
+                self.speed += speed * 2
+            else:
+                self.cont += x
+                self.velo += x
+                self.move += x
+                self.field += x
+                self.speed += x
         self.overall = self.cont + self.velo + self.move
         self.total = self.overall + self.field + self.speed
 
     def acceptDeal(self):
         bestOffer = None
         bestValue = 0
-        for i in self.offers:
-            if i[1]*(i[2]**2) > bestValue:
-                bestValue = i[1]*(i[2]**2)
-                bestOffer = i
+        if self.controlled:
+            for i in range(len(self.offers)):
+                print(i, self.offers[i])
+            try:
+                choice = int(input('Would u like to sign any of these (input their number or blank to stick around)'))
+                bestOffer = self.offers[choice]
+            except ValueError or IndexError:
+                bestOffer = None
+        else:
+            for i in self.offers:
+                if i[1]*(i[2]**2) > bestValue:
+                    bestValue = i[1]*(i[2]**2)
+                    bestOffer = i
         if bestOffer is not None and self.pos == 'SP':
             bestOffer[0].rotation.loc[len(bestOffer[0].rotation)] = numpy.array([self, self.hand, self.arStr,
                                                                                  self.overall, self.extension], dtype=object)
@@ -254,28 +327,65 @@ class Hitter:
         self.offers = []
 
     def boost(self, x):
-        if self.controlled:
+        if not self.controlled:
             self.con += x
             self.pow += x
             self.vis += x
             self.field += x
             self.speed += x
         else:
-            self.con += x
-            self.pow += x
-            self.vis += x
-            self.field += x
-            self.speed += x
+            if x > 0:
+                bank = x * 5
+                contact = int(input('Bank Remaining: ' + str(bank) + '. How many towards contact?'))
+                if contact > bank:
+                    contact = bank
+                bank -= contact
+                power = int(input('Bank Remaining: ' + str(bank) + '. How many towards power?'))
+                if power > bank:
+                    power = bank
+                bank -= power
+                vision = int(input('Bank Remaining: ' + str(bank) + '. How many towards vision?'))
+                if vision > bank:
+                    vision = bank
+                bank -= vision
+                fielding = int(input('Bank Remaining: ' + str(bank) + '. How many towards fielding?'))
+                if fielding > bank:
+                    fielding = bank
+                bank -= fielding
+                speed = int(input('Bank Remaining: ' + str(bank) + '. How many towards speed?'))
+                if speed > bank:
+                    speed = bank
+                bank -= speed
+                self.con += contact
+                self.pow += power
+                self.vis += vision
+                self.field += fielding
+                self.speed += speed
+            else:
+                self.con += x
+                self.pow += x
+                self.vis += x
+                self.field += x
+                self.speed += x
         self.offense = self.con + self.pow + self.vis
         self.overall = self.offense + self.field + self.speed
 
     def acceptDeal(self):
         bestOffer = None
         bestValue = 0
-        for i in self.offers:
-            if i[1]*(i[2]**2) > bestValue:
-                bestValue = i[1]*(i[2]**2)
-                bestOffer = i
+        if self.controlled:
+            for i in range(len(self.offers)):
+                print(i, self.offers[i])
+            try:
+                choice = int(input('Would u like to sign any of these (input their number or blank to stick around)'))
+                bestOffer = self.offers[choice]
+            except ValueError or IndexError:
+                bestOffer = None
+        else:
+            for i in self.offers:
+                if i[1]*(i[2]**2) > bestValue:
+                    bestValue = i[1]*(i[2]**2)
+                    bestOffer = i
         if bestOffer is not None:
             bestOffer[0].hitters.loc[len(bestOffer[0].hitters)] = numpy.array([self, self.pos, self.secondary, self.overall,
                                                                    self.offense, self.available], dtype=object)

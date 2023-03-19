@@ -4,7 +4,7 @@ from DirectoryWide import *
 
 
 def userStartup():
-    print('1 for Hitter, 2 for Pitcher, 3 for GM (SOON), 4 for CPU SIM')
+    print('1 for Hitter, 2 for Pitcher, 3 for GM, 4 for CPU SIM')
     user1 = input('What is your choice?')
     if user1 == '1':
         player = buildAHitter()
@@ -17,6 +17,13 @@ def userStartup():
             player = buildAPitcher('RP')
     elif user1 == '3':
         player = pickATeam()
+        try:
+            choiceB = int(input('0 for small budget (300), 1 for average (500), 2 for big budget (700), blank for given'))
+            if choiceB > 2 or choiceB < 0:
+                raise ValueError
+            player.budget = 300 + (200 * choiceB)
+        except ValueError:
+            pass
         player.controlled = True
     else:
         player = None
@@ -52,6 +59,7 @@ def userStartup():
             team.bullpen.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
             print(team)
             print(team.bullpen)
+    return user1
 
 
 def buildAHitter():
@@ -88,8 +96,32 @@ def buildAPitcher(pos):
     player = Pitcher(name, pos, hand=hand, controlled=True)
     (player.cont, player.velo, player.move, player.field, player.speed) = (4, 4, 4, 4, 4)
     (player.age, player.contract, player.arsenal) = (1, [3, 2], arsenal)
+    player.arStr = ''
+    for i in player.arsenal:
+        player.arStr = player.arStr + i[0:2]
     player.overall = player.cont + player.velo + player.move
     player.total = player.overall + player.field + player.speed
+    pre = True
+    print('Presets (pitch type and location aim) for pitching will make this way more enjoyable, I recommend using '
+          'them. As many as u want but Id say no more than 5 for space')
+    while pre:
+        pre = input('Input anything to add a preset, nothing to skip')
+        if not pre:
+            break
+        print(player.arsenal)
+        try:
+            choice = int(input('Which pitch do you want to use, first is 0, second is 1, etc.'))
+            pType = player.arsenal[choice]
+        except ValueError or IndexError:  # If user messes up, so the entire thing doesnt come crashing down
+            print('bad input')
+            continue
+        try:
+            xPick = float(input('X-coordinate aim?'))
+            yPick = float(input('Y-coordinate aim?'))
+        except ValueError:
+            print('bad input')
+            continue
+        player.presets.append([pType, xPick, yPick])
     return player
 
 

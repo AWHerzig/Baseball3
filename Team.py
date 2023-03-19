@@ -104,9 +104,7 @@ class Team:
             except IndexError:  # No Available hitter with positional eligibility not in roster already
                 pushback.append(i)
         for i in pushback:
-            cur = \
-            self.hitters[~self.hitters['Name'].isin(self.lineupCard.dAlign) & self.hitters['Available'] == True].iloc[
-                0]['Name']
+            cur = self.hitters[~self.hitters['Name'].isin(self.lineupCard.dAlign) & self.hitters['Available'] == True].iloc[0]['Name']
             cur.outOfPos = True
             self.lineupCard.dAlign[i] = cur
             self.lineupCard.battingOrder.loc[len(self.lineupCard.battingOrder)] = [cur, posNotation[i], cur.offense,
@@ -227,19 +225,19 @@ class Team:
                 (dum.age, dum.value, dum.cost) = (0, 0, 2)
                 self.bullpen.loc[len(self.bullpen)] = numpy.array([dum, dum.hand, dum.arStr, dum.overall,
                                                                    dum.extension, dum.available], dtype=object)
-        avHitters = pandas.concat([fa[~fa['Pos2'].isnull()], self.prospects[~self.prospects['Pos2'].isnull()]])
+        avHitters = pandas.concat([fa[~fa['Pos2'].isnull()], self.prospects[~self.prospects['Pos2'].isnull()]], ignore_index=True)
         for i in avHitters['Name']:
             i.value = self.setValue(i, roundNum)
             i.cost = i.value if i.age > 1 else 2
         avHitters['Value'] = [i.value for i in avHitters['Name']]
         avHitters['Cost'] = [i.cost for i in avHitters['Name']]
-        avSPs = pandas.concat([fa[fa['Pos1'] == 'SP'], self.prospects[self.prospects['Pos1'] == 'SP']])
+        avSPs = pandas.concat([fa[fa['Pos1'] == 'SP'], self.prospects[self.prospects['Pos1'] == 'SP']], ignore_index=True)
         for i in avSPs['Name']:
             i.value = self.setValue(i, roundNum)
             i.cost = i.value if i.age > 1 else 2
         avSPs['Value'] = [i.value for i in avSPs['Name']]
         avSPs['Cost'] = [i.cost for i in avSPs['Name']]
-        avRPs = pandas.concat([fa[fa['Pos1'] == 'RP'], self.prospects[self.prospects['Pos1'] == 'RP']])
+        avRPs = pandas.concat([fa[fa['Pos1'] == 'RP'], self.prospects[self.prospects['Pos1'] == 'RP']], ignore_index=True)
         for i in avRPs['Name']:
             i.value = self.setValue(i, roundNum)
             i.cost = i.value if i.age > 1 else 2
@@ -248,6 +246,111 @@ class Team:
         avHitters.sort_values(['Value', 'OVR'], inplace=True, ascending=False)
         avSPs.sort_values(['Value', 'OVR'], inplace=True, ascending=False)
         avRPs.sort_values(['Value', 'OVR'], inplace=True, ascending=False)
+        if self.controlled:
+            self.selfContracts(remBudget, avHitters, avSPs, avRPs, roundNum)
+        else:
+            self.buildBundles(remBudget, avHitters, avSPs, avRPs, roundNum, p)
+
+    def selfContracts(self, remBudget, avHitters, avSPs, avRPs, roundNum):
+        print('USER ROUND', roundNum)
+        avHitters['Contact'] = [i.con for i in avHitters['Name']]
+        avHitters['Power'] = [i.pow for i in avHitters['Name']]
+        avHitters['Vision'] = [i.vis for i in avHitters['Name']]
+        avHitters['Fielding'] = [i.field for i in avHitters['Name']]
+        avHitters['Speed'] = [i.speed for i in avHitters['Name']]
+        avSPs['Control'] = [i.cont for i in avSPs['Name']]
+        avSPs['Velocity'] = [i.velo for i in avSPs['Name']]
+        avSPs['Movement'] = [i.move for i in avSPs['Name']]
+        avSPs['Fielding'] = [i.field for i in avSPs['Name']]
+        avSPs['Speed'] = [i.speed for i in avSPs['Name']]
+        avSPs['Arsenal'] = [i.arsStr for i in avSPs['Name']]
+        avRPs['Control'] = [i.cont for i in avRPs['Name']]
+        avRPs['Velocity'] = [i.velo for i in avRPs['Name']]
+        avRPs['Movement'] = [i.move for i in avRPs['Name']]
+        avRPs['Fielding'] = [i.field for i in avRPs['Name']]
+        avRPs['Speed'] = [i.speed for i in avRPs['Name']]
+        avRPs['Arsenal'] = [i.arsStr for i in avRPs['Name']]
+        # your players
+        self.hitters['Contact'] = [i.con for i in self.hitters['Name']]
+        self.hitters['Power'] = [i.pow for i in self.hitters['Name']]
+        self.hitters['Vision'] = [i.vis for i in self.hitters['Name']]
+        self.hitters['Fielding'] = [i.field for i in self.hitters['Name']]
+        self.hitters['Speed'] = [i.speed for i in self.hitters['Name']]
+        self.rotation['Control'] = [i.cont for i in self.rotation['Name']]
+        self.rotation['Velocity'] = [i.velo for i in self.rotation['Name']]
+        self.rotation['Movement'] = [i.move for i in self.rotation['Name']]
+        self.rotation['Fielding'] = [i.field for i in self.rotation['Name']]
+        self.rotation['Speed'] = [i.speed for i in self.rotation['Name']]
+        self.bullpen['Control'] = [i.cont for i in self.bullpen['Name']]
+        self.bullpen['Velocity'] = [i.velo for i in self.bullpen['Name']]
+        self.bullpen['Movement'] = [i.move for i in self.bullpen['Name']]
+        self.bullpen['Fielding'] = [i.field for i in self.bullpen['Name']]
+        self.bullpen['Speed'] = [i.speed for i in self.bullpen['Name']]
+        with pandas.ExcelWriter('UserFAs.xlsx') as writer:
+            avHitters.to_excel(writer, sheet_name='FA Hitters')
+            avSPs.to_excel(writer, sheet_name='FA Starters')
+            avRPs.to_excel(writer, sheet_name='FA Relievers')
+            self.hitters.to_excel(writer, sheet_name='Your Hitters')
+            self.rotation.to_excel(writer, sheet_name='Your Starters')
+            self.bullpen.to_excel(writer, sheet_name='Your Relievers')
+        going = True
+        while going:
+            going = input('Input anything to make an offer, blank to stop for the round')
+            if not going:
+                break
+            try:
+                print('Remaining Budget:', remBudget)
+                group = int(input('1 for hitter, 2 for SP, 3 for RP'))
+                if group == 1:
+                    loc = int(input('Input the key of hitter you wish to offer a contract'))
+                    player = avHitters.loc[loc].Name
+                    if player.age == 1:
+                        print('Prospect. 3yr 2AAV offer.')
+                        salary = 2
+                        duration = 3
+                    else:
+                        salary = int(input('AAV offer?'))
+                        duration = int(input('How many years is the contract'))
+                elif group == 2:
+                    loc = int(input('Input the key of starter you wish to offer a contract'))
+                    player = avSPs.loc[loc].Name
+                    if player.age == 1:
+                        print('Prospect. 3yr 2AAV offer.')
+                        salary = 2
+                        duration = 3
+                    else:
+                        salary = int(input('AAV offer?'))
+                        duration = int(input('How many years is the contract'))
+                elif group == 3:
+                    loc = int(input('Input the key of reliever you wish to offer a contract'))
+                    player = avRPs.loc[loc].Name
+                    if player.age == 1:
+                        print('Prospect. 3yr 2AAV offer.')
+                        salary = 2
+                        duration = 3
+                    else:
+                        salary = int(input('AAV offer?'))
+                        duration = int(input('How many years is the contract'))
+                else:
+                    raise ValueError
+                if salary > remBudget:
+                    print('Too expensive')
+                    raise ValueError
+                player.offers.append([self, duration, salary])
+                if isinstance(player, Hitter):
+                    print(self.name, 'offer a', duration, 'year,', salary, 'AAV contract to', player.pos + '/'
+                          + player.secondary, player.smallLine())
+                else:
+                    print(self.name, 'offer a', duration, 'year,', salary, 'AAV contract to', player.pos, player.smallLine())
+                remBudget -= salary
+            except ValueError:
+                print('Bad input')
+                continue
+        dud = input('CLOSE THE EXCEL FILE OR ELSE IT WONT UPDATE, THEN HIT ENTER')
+
+
+
+    def buildBundles(self, remBudget, avHitters, avSPs, avRPs, roundNum, p):
         if roundNum > 15:
             print(avRPs)
         # print(avHitters.head())
@@ -359,6 +462,9 @@ class Team:
                     cost += i.cost
                     halfCost += max(round(i.cost / 2, 1), 2)
             rpBundles[j] = cur + [val, cost, halfCost]
+        self.buildOffers(remBudget, hBundles, spBundles, rpBundles, p)
+
+    def buildOffers(self, remBudget, hBundles, spBundles, rpBundles, p):
         offers = []
         halfOffers = []
         bestValue = 0
@@ -376,6 +482,9 @@ class Team:
                         if val > halfValue:
                             halfValue = val
                             halfOffers = i[:-3] + j[:-3] + k[:-3]
+        self.sendOffers(offers, halfOffers, p)
+
+    def sendOffers(self, offers, halfOffers, p):
         for i in offers:
             conLen = 3 if i.age == 1 else random.randrange(1, 5)
             i.offers.append([self, conLen, i.cost])
@@ -445,6 +554,8 @@ class Lineup:  # Lineup card, gets called within the game
         for i in self.bullpen[self.bullpen['Available'] == True].Name:
             if i.controlled:
                 answer = i
+        if self.rotation.iloc[(self.rotMarker + 1) % 5]['Name'].controlled:
+            answer = self.rotation.iloc[(self.rotMarker + 1) % 5]['Name']
         return answer
 
     def printout(self):  # Shows starting lineups

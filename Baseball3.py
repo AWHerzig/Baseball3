@@ -47,10 +47,14 @@ while year <= 5:
     year += 1
 print('100%')
 go = 'True'
-offP = 1
-userStartup()
+offP = 1  # print value for the offseason
+starter = userStartup()
 #format2()
 while go:
+    if starter == '3':
+        holdovers = holdUpdate(cur)
+        cur = offseason(year, offP, holdovers)
+        year += 1
     if schedLength in ['2', '162']:  # This is the kickoff for the whole thing
         playIt(schedule162)
     elif schedLength in ['0', '20']:
