@@ -87,7 +87,7 @@ def test(hScore, pScore):  # Sims a bunch of innings and returns a stat like ERA
             pass
         #print('new inning')
         dlineup.dAlign[1].stamScore = 1000
-        inning(oLineup, dlineup, 'h', board, 0)
+        inning(oLineup, dlineup, 'h', board, 6)
     hitter.calcStats()
     pitcher.calcStats()
     #print('Hitter:', hScore, 'Pitcher:', pScore)
@@ -138,7 +138,7 @@ def test2(hScore, pScore):  # Sims a bunch of PAs and returns breakdown of resul
             T += 1
         elif res[1] == 'IPHR':
             IPHR += 1
-        elif res[1] == 'out':
+        elif res[1] in ['out', 'FC', 'DP', 'LO', 'FO', 'GO', 'Pop Out', 'Foul Out']:
             outs += 1
         else:
             print(res, 'bruh')
@@ -260,7 +260,7 @@ def test5(pType):  # Sims a bunch of PAs and returns breakdown of results
             T += 1
         elif res[1] == 'IPHR':
             IPHR += 1
-        elif res[1] == 'out':
+        elif res[1] in ['out', 'FC', 'DP', 'LO', 'FO', 'GO', 'Pop Out', 'Foul Out']:
             outs += 1
         else:
             print(res, 'bruh')
@@ -314,7 +314,7 @@ def test6(fScore):
             T += 1
         elif res[1] == 'IPHR':
             IPHR += 1
-        elif res[1] == 'out':
+        elif res[1] in ['out', 'FC', 'DP', 'LO', 'FO', 'GO', 'Pop Out', 'Foul Out']:
             outs += 1
         else:
             print(res, 'bruh')

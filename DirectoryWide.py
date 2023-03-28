@@ -1,6 +1,8 @@
 import math
 import names
 import numpy
+import pandas
+pandas.options.mode.chained_assignment = None
 
 
 def pythag(a, b):  # A lot of this file is gonna be "just nice to have"
@@ -60,24 +62,25 @@ def ageCurve(age, base=False, controlled=False):
             return 3
         else:
             return 8 - age
-    elif not controlled:
-        if age < 5:
-            return 1
-        elif age == 5:
-            return 0
-        elif age < 8:
-            return -1
-        else:
-            return -2
     else:
-        if age < 5:
-            return 2
-        elif age == 5:
-            return 0
-        elif age < 8:
-            return -1
+        if controlled:
+            if age < 5:
+                return 2
+            elif age == 5:
+                return 0
+            elif age < 8:
+                return -1
+            else:
+                return -2
         else:
-            return -2
+            if age < 5:
+                return 1
+            elif age == 5:
+                return 0
+            elif age < 8:
+                return -1
+            else:
+                return -2
 
 
 def locString(cp, hand):
@@ -174,10 +177,12 @@ rubberToPlate = 60.5  # Pitcher's back foot is touching the rubber
 split = .025  # How much time (sec) passes in between snapshots... kinda like a frame rate
 bounceCo = .325  # This doesn't actually get used but someday it might
 frictionDecel = -1.63  # Coefficient of Friction is .35... cuz I said so
-SPstam = 50  # Gets added to/subtracted from based on game events, when 0 the P gets subbed
+SPstam = 75  # Gets added to/subtracted from based on game events, when 0 the P gets subbed
 RPstam = 15  # Starters go longer than relievers
 baseRunning = 20
 baseRange = 290
+faFormat = 2
+simYears = 5
 # [X-Accel, Y-Accel, Z-Velo, Baseline X, Baseline Y] baselines will be adjusted by Pitcher.
 # This is for righties, lefties will flip Xs. Gravity gets added to Y-accel later
 # SUUUPER Tentative... becoming less tentative

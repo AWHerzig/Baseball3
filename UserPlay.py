@@ -18,10 +18,10 @@ def userStartup():
     elif user1 == '3':
         player = pickATeam()
         try:
-            choiceB = int(input('0 for small budget (300), 1 for average (500), 2 for big budget (700), blank for given'))
+            choiceB = int(input('0 for small budget (150), 1 for average (250), 2 for big budget (350), blank for given'))
             if choiceB > 2 or choiceB < 0:
                 raise ValueError
-            player.budget = 300 + (200 * choiceB)
+            player.budget = 150 + (100 * choiceB)
         except ValueError:
             pass
     else:
@@ -42,6 +42,7 @@ def userStartup2(player):
         team.hitters.sort_values(['Overall', 'Offense'], inplace=True, ascending=False)
         print(team)
         print(team.hitters)
+        dud = input('Hit enter to advance')
     elif isinstance(player, Pitcher):
         user3 = input('Input anything to be able to pick your team, just hit enter to be assigned team')
         if user3:
@@ -55,6 +56,7 @@ def userStartup2(player):
             team.rotation.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
             print(team)
             print(team.rotation)
+            dud = input('Hit enter to advance')
         else:
             team.bullpen.reset_index(drop=True, inplace=True)
             team.bullpen.loc[7] = numpy.array([player, player.hand, player.arStr, player.overall,
@@ -62,8 +64,19 @@ def userStartup2(player):
             team.bullpen.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
             print(team)
             print(team.bullpen)
+            dud = input('Hit enter to advance')
     elif isinstance(player, Team):
         player.controlled = True
+        if input('Input anything to set your own FA scouting evaluations, blank to use old front offices values.'):
+            valStr = ['Contact', 'Power', 'Vision', 'Hitter Field/Speed', 'Control', 'Velocity', 'Movement', 'Pitcher Field/Speed', 'Prospect Boost']
+            print('Standard is 1-3 for all of these, but tbh you can do anything you want, just a linear combination.')
+            for i in range(9):
+                try:
+                    choice = int(input('How much will you value '+valStr[i]+'?'))
+                except ValueError:
+                    print('Bad input, set to 0')
+                    choice = 0
+                player.values[i] = choice
 
 
 def buildAHitter():
@@ -127,7 +140,7 @@ def buildAPitcher(pos):
         try:
             choice = int(input('Which pitch do you want to use, first is 0, second is 1, etc.'))
             pType = player.arsenal[choice]
-        except ValueError or IndexError:  # If user messes up, so the entire thing doesnt come crashing down
+        except IndexError:  # If user messes up, so the entire thing doesnt come crashing down
             print('bad input')
             continue
         try:

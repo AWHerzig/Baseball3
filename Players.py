@@ -79,17 +79,25 @@ class Pitcher:
     def smallLine(self):
         return self.name + '(' + str(self.age) + ';' + str(self.cont) + ',' + str(self.velo) + ',' + str(self.move) + ';' + str(round(self.ERA, 2)) + ')'
 
+    def idLine(self):
+        return self.pos + '    ' + self.name + '(' + str(self.age) + ';' + str(self.cont) + ',' + str(self.velo) + ',' + str(self.move) + ',' + str(self.field) + ',' + str(self.speed) + ')'
+
     def bigLine(self):
         return self.name + '(' + str(self.age) + ';' + str(self.cont) + ',' + str(self.velo) + ',' + str(self.move) \
-               + ')' + str(self.IP) + 'IP, ' + self.record() + ', ' + str(self.S + self.Hold) + '/' + str(self.SO) + ' S+H, ' + \
+               + ') ' + str(self.IP) + 'IP, ' + self.record() + ', ' + str(self.S + self.Hold) + '/' + str(self.SO) + ' S+H, ' + \
                str(self.ERA) + 'ERA, ' + str(self.WHIP) + 'WHIP, ' + str(self.Kp) + 'K%'
 
     def canGetThere(self, dist, time):
-        return dist < (17 + .5 * self.speed) * min(time - 1.1 + (.05*self.field), 0) + (1 + .5*self.field)
+        return dist < (17 + .5 * self.speed) * max(time - 1.1 + (.05*self.field), 0) + (1 + .5*self.field)
 
     def reset(self):  # Year to year reset
         self.available = True
         self.usage = 0
+        self.W = 0
+        self.L = 0
+        self.S = 0
+        self.Hold = 0
+        self.SO = 0
         self.OR = 0
         self.BF = 0
         self.ER = 0
@@ -102,11 +110,13 @@ class Pitcher:
         self.WHIP = 0
         self.Kp = 0
         self.age += 1
-        self.boost(ageCurve(self.age, self.controlled))
+        self.boost(ageCurve(self.age, controlled=self.controlled))
         self.contract[0] -= 1
         self.offers = []
 
     def boost(self, x):
+        if self.controlled:
+            print('X is:', x)
         if not self.controlled:
             self.cont += x
             self.velo += x
@@ -116,6 +126,8 @@ class Pitcher:
         else:
             if x > 0:
                 bank = x * 4
+                print('You currently:', self.idLine(), self.arStr)
+                print(bank)
                 newP = input('Input anything to spend 2 on learning a new pitch, blank to pass')
                 if newP and bank >= 2:
                     bank -= 2
@@ -123,16 +135,25 @@ class Pitcher:
                     for i in range(len(list(pitches.keys()))):
                         if list(pitches.keys())[i] not in self.arsenal:
                             print(i, list(pitches.keys())[i])
+                    try:
+                        pick = int(input('Input the number corresponding to the pitch you want'))
+                        self.arsenal.append(list(pitches.keys())[pick])
+                        self.arStr = ''
+                        for i in self.arsenal:
+                            self.arStr = self.arStr + i[0:2]
+                    except Exception:
+                        print('u did it wrong chump, take ur money back')
+                        bank += 2
                     pre = True
                     while pre:
                         pre = input('Input anything to add a preset, nothing to skip')
                         if not pre:
                             break
-                        print(player.arsenal)
+                        print(self.arsenal)
                         try:
                             choice = int(input('Which pitch do you want to use, first is 0, second is 1, etc.'))
-                            pType = player.arsenal[choice]
-                        except ValueError or IndexError:  # If user messes up, so the entire thing doesnt come crashing down
+                            pType = self.arsenal[choice]
+                        except Exception:  # If user messes up, so the entire thing doesnt come crashing down
                             print('bad input')
                             continue
                         try:
@@ -141,33 +162,44 @@ class Pitcher:
                         except ValueError:
                             print('bad input')
                             continue
-                        player.presets.append([pType, xPick, yPick])
-                    try:
-                        pick = int(input('Input the number corresponding to the pitch you want'))
-                        self.arsenal.append(list(pitches.keys())[pick])
-                        self.arStr = ''
-                        for i in self.arsenal:
-                            self.arStr = self.arStr + i[0:2]
-                    except IndexError or ValueError:
-                        print('u did it wrong chump, take ur money back')
-                        bank += 2
-                control = int(input('Bank Remaining: ' + str(bank) + '. How many towards control?'))
+                        self.presets.append([pType, xPick, yPick])
+                try:
+                    control = int(input('Bank Remaining: ' + str(bank) + '. How many towards control?'))
+                except ValueError:
+                    print('Bad Input, set to 0')
+                    control = 0
                 if control > bank:
                     control = bank
                 bank -= control
-                velocity = int(input('Bank Remaining: ' + str(bank) + '. How many towards velocity?'))
+                try:
+                    velocity = int(input('Bank Remaining: ' + str(bank) + '. How many towards velocity?'))
+                except ValueError:
+                    print('Bad Input, set to 0')
+                    velocity = 0
                 if velocity > bank:
                     velocity = bank
                 bank -= velocity
-                movement = int(input('Bank Remaining: ' + str(bank) + '. How many towards movement?'))
+                try:
+                    movement = int(input('Bank Remaining: ' + str(bank) + '. How many towards movement?'))
+                except ValueError:
+                    print('Bad Input, set to 0')
+                    movement = 0
                 if movement > bank:
                     movement = bank
                 bank -= movement
-                fielding = int(input('Bank Remaining: ' + str(bank) + '. How many towards fielding (double value)?'))
+                try:
+                    fielding = int(input('Bank Remaining: ' + str(bank) + '. How many towards fielding (2x Value)?'))
+                except ValueError:
+                    print('Bad Input, set to 0')
+                    fielding = 0
                 if fielding > bank:
                     fielding = bank
                 bank -= fielding
-                speed = int(input('Bank Remaining: ' + str(bank) + '. How many towards speed (double value)?'))
+                try:
+                    speed = int(input('Bank Remaining: ' + str(bank) + '. How many towards speed (2x Value)?'))
+                except ValueError:
+                    print('Bad Input, set to 0')
+                    speed = 0
                 if speed > bank:
                     speed = bank
                 bank -= speed
@@ -177,6 +209,7 @@ class Pitcher:
                 self.field += fielding * 2
                 self.speed += speed * 2
             else:
+                dud = input('woobly doobly')
                 self.cont += x
                 self.velo += x
                 self.move += x
@@ -190,12 +223,18 @@ class Pitcher:
         bestValue = 0
         if self.controlled:
             for i in range(len(self.offers)):
-                print(i, self.offers[i])
-            try:
-                choice = int(input('Would u like to sign any of these (input their number or blank to stick around)'))
-                bestOffer = self.offers[choice]
-            except ValueError or IndexError:
-                bestOffer = None
+                print(i, self.offers[i][0], 'offers a contract for', self.offers[i][1], 'years', self.offers[i][2], 'AAV.')
+            if len(self.offers) == 0:
+                dud = input('You were not offered any contracts in this round. Hit enter to advance')
+            else:
+                try:
+                    choice = int(input('Would u like to sign any of these (input their number or blank to stick around)'))
+                    bestOffer = self.offers[choice]
+                except Exception:
+                    for i in self.offers:
+                        if i[1] * (i[2] ** 2) > bestValue:
+                            bestValue = i[1] * (i[2] ** 2)
+                            bestOffer = i
         else:
             for i in self.offers:
                 if i[1]*(i[2]**2) > bestValue:
@@ -284,12 +323,16 @@ class Hitter:
         self.slash = str(self.AVG)[1:] + '/' + str(self.OBP)[1:] + '/' + str(self.SLG)
 
     def smallLine(self):
-        return self.name + '(' + str(self.age) + ';' + str(self.vis) + ',' + str(self.con) + ',' + str(self.pow) + ';' + str(round(self.OPS, 2)) + ')'
+        return self.name + '(' + str(self.age) + ';' + str(self.con) + ',' + str(self.pow) + ',' + str(self.vis) + ';' + str(round(self.OPS, 2)) + ')'
+
+    def idLine(self):
+        return self.pos + '/' + self.secondary + ' ' + self.name + '(' + str(self.age) + ';' + str(self.con) + ',' + \
+               str(self.pow) + ',' + str(self.vis) + ',' + str(self.field) + ',' + str(self.speed) + ')'
 
     def bigLine(self):
-        return self.name + '(' + str(self.age) + ';' + str(self.vis) + ',' + str(self.con) + ',' + str(self.pow) + ')' \
-               + str(self.PA) + ' PA, ' + self.slash + ', ' + str(self.HR) + 'HR, ' + str(self.SB) + '/' + str(self.SB + self.CS) + \
-               'SB, ' + str(self.RBI) + 'RBI'
+        return self.name + '(' + str(self.age) + ';' + str(self.con) + ',' + str(self.pow) + ',' + str(self.vis) + ') '\
+               + str(self.PA) + ' PA, ' + self.slash + ', ' + str(self.HR) + 'HR, ' + str(self.SB) + '/' \
+               + str(self.SB + self.CS) + 'SB, ' + str(self.RBI) + 'RBI'
 
     def canGetThere(self, dist, time):
         if self.outOfPos:
@@ -322,7 +365,7 @@ class Hitter:
         self.usage = 0
         self.available = True
         self.age += 1
-        self.boost(ageCurve(self.age))
+        self.boost(ageCurve(self.age, controlled=self.controlled))
         self.contract[0] -= 1
         self.offers = []
 
@@ -336,23 +379,44 @@ class Hitter:
         else:
             if x > 0:
                 bank = x * 5
-                contact = int(input('Bank Remaining: ' + str(bank) + '. How many towards contact?'))
+                print('You currently:', self.idLine())
+                try:
+                    contact = int(input('Bank Remaining: ' + str(bank) + '. How many towards contact?'))
+                except ValueError:
+                    print('Bad Input, set to 0')
+                    contact = 0
                 if contact > bank:
                     contact = bank
                 bank -= contact
-                power = int(input('Bank Remaining: ' + str(bank) + '. How many towards power?'))
+                try:
+                    power = int(input('Bank Remaining: ' + str(bank) + '. How many towards power?'))
+                except ValueError:
+                    print('Bad Input, set to 0')
+                    power = 0
                 if power > bank:
                     power = bank
                 bank -= power
-                vision = int(input('Bank Remaining: ' + str(bank) + '. How many towards vision?'))
+                try:
+                    vision = int(input('Bank Remaining: ' + str(bank) + '. How many towards vision?'))
+                except ValueError:
+                    print('Bad Input, set to 0')
+                    vision = 0
                 if vision > bank:
                     vision = bank
                 bank -= vision
-                fielding = int(input('Bank Remaining: ' + str(bank) + '. How many towards fielding?'))
+                try:
+                    fielding = int(input('Bank Remaining: ' + str(bank) + '. How many towards fielding?'))
+                except ValueError:
+                    print('Bad Input, set to 0')
+                    fielding = 0
                 if fielding > bank:
                     fielding = bank
                 bank -= fielding
-                speed = int(input('Bank Remaining: ' + str(bank) + '. How many towards speed?'))
+                try:
+                    speed = int(input('Bank Remaining: ' + str(bank) + '. How many towards speed?'))
+                except ValueError:
+                    print('Bad Input, set to 0')
+                    speed = 0
                 if speed > bank:
                     speed = bank
                 bank -= speed
@@ -375,12 +439,19 @@ class Hitter:
         bestValue = 0
         if self.controlled:
             for i in range(len(self.offers)):
-                print(i, self.offers[i])
-            try:
-                choice = int(input('Would u like to sign any of these (input their number or blank to stick around)'))
-                bestOffer = self.offers[choice]
-            except ValueError or IndexError:
-                bestOffer = None
+                print(i, self.offers[i][0], 'offers a contract for', self.offers[i][1], 'years', self.offers[i][2], 'AAV.')
+            if len(self.offers) == 0:
+                dud = input('You were not offered any contracts in this round. Hit enter to advance')
+            else:
+                try:
+                    choice = int(
+                        input('Would u like to sign any of these (input their number or blank to stick around)'))
+                    bestOffer = self.offers[choice]
+                except Exception:
+                    for i in self.offers:
+                        if i[1] * (i[2] ** 2) > bestValue:
+                            bestValue = i[1] * (i[2] ** 2)
+                            bestOffer = i
         else:
             for i in self.offers:
                 if i[1]*(i[2]**2) > bestValue:

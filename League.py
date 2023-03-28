@@ -3,16 +3,22 @@ from Gameplay import *
 from Team import *
 from DirectoryWide import *
 import numpy
-
-schedLength = input('How many games per season would you like? (20, 52, 162)')  # 0 is 20, 1 and '' is 52, 2 is 162
-playoffSize = input('What playoff format would you like? (8, 10, 12, DE)')  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
+from alive_progress import alive_bar, alive_it
+#"""
+schedLength = input('How many games per season would you like? (20, 52, 162, Alt)')  # 0 is 20, 1 and '' is 52, 2 is 162
+if schedLength == '':
+    schedLength = '52'
+if schedLength == 'Alt':
+    playoffSize = 'it literally doesnt matter'
+else:
+    playoffSize = input('What playoff format would you like? (8, 10, 12, DE)')  # 0 is 8, 1 is 10, 2 and '' is 12 (also 'DE12' for the fun one I'm gonna make)
 #schedLength = '162'
 #playoffSize = 'DE'
 
 seriesHome = [None, [0], [0, 0, 0], [0, 0, 1, 1, 0], [0, 0, 1, 1, 1, 0, 0]]
 # First index is series length (in wins needed), second index: 0 means better seed hosts game, 1 means worse seed
-#"""
-print('Building the teams')
+
+print('Building the teams...')
 NLEt = [Team('Washington Nationals ', 'WSN'), Team('New York Mets        ', 'NYM'),
         Team('Atlanta Braves       ', 'ATL'), Team('Miami Marlins        ', 'MIA'),
         Team('Philadelphia Phillies', 'PHI')]  # Teams
@@ -138,6 +144,8 @@ for i in range(177):
 # 20 Game Schedule - 2 Geo Rival + 8 divisional + 10 non divisional same league, Home = Away not promised
 schedule20 = geoRivalsFinal + geoRivals2Final + divisionalSlates + leagueSlates
 random.shuffle(schedule20)
+
+schedule0 = []
 #"""
 
 
@@ -188,7 +196,7 @@ def playIt(schedule):  # Plays the regular season
             print('ALL-STAR BREAK')
             WSHost = allstarGame(int(schedLength)//2)  # Winner of the ASG gets top seed in WS
             for dkajfhdkfh in NLt+ALt:  # i got annoyed
-                dkajfhdkfh.setTeam()
+                dkajfhdkfh.setTeam(p=False)
         print('SLATE', i+1)
         slateScores = []
         for j in schedule[i]:
@@ -219,12 +227,14 @@ def playIt(schedule):  # Plays the regular season
         i.reset_index(drop=True, inplace=True)
     print(NLs)
     print(ALs)
-    if playoffSize in ['0', '8']:
+    if playoffSize in ['1', '8']:
         playoffs8(NLs, ALs, WSHost)
-    elif playoffSize in ['1', '10']:
+    elif playoffSize in ['2', '10']:
         playoffs10(NLs, ALs, WSHost)
     elif playoffSize in ['DE', 'DE12']:
         playoffsDP12(NLs, ALs)
+    elif playoffSize == '0':
+        pass
     else:
         playoffs12(NLs, ALs, WSHost)
 
@@ -410,7 +420,84 @@ def playoffsDP12(NLs, ALs):  # No one ever has thought this was a good idea
     print(G19, 'WINS THE WORLD SERIES')
 
 
+def hrDerby(NLcontestants, ALcontestants, host):
+    print('National League Contestants')
+    for i in NLcontestants:
+        print(i.bigLine())
+    print('American League Contestants')
+    for i in ALcontestants:
+        print(i.bigLine())
+    board = Scoreboard(host.ABR, 1)
+    print('National League SF')
+    NL1 = hrdMatchup(NLcontestants[0], NLcontestants[3], board)
+    NL2 = hrdMatchup(NLcontestants[1], NLcontestants[2], board)
+    print('American League SF')
+    AL1 = hrdMatchup(ALcontestants[0], ALcontestants[3], board)
+    AL2 = hrdMatchup(ALcontestants[1], ALcontestants[2], board)
+    print('National League Final')
+    NLwinner = hrdMatchup(NL1, NL2, board)
+    print('American League Final')
+    ALwinner = hrdMatchup(AL1, AL2, board)
+    print('Grand Final')
+    winner = hrdMatchup(NLwinner, ALwinner, board)
+    print(winner.team, winner.idLine(), 'WINS THE TITLE')
+
+
+def hrdMatchup(x, y, board):
+    print(x.team, x.idLine(), 'v', y.team, y.idLine())
+    xScore = 0
+    xOuts = 0
+    yScore = 0
+    yOuts = 0
+    swings = 0
+    while xOuts < 10:
+        res = hrdPitch(x, board)
+        if res == True:
+            xScore += 1
+        elif res == '':
+            pass
+        else:
+            xOuts += 1
+        swings += 1
+        if board.p >= 2:
+            print(xScore, xOuts)
+    while yOuts < 10:
+        res = hrdPitch(y, board)
+        if res == True:
+            yScore += 1
+        elif res == '':
+            pass
+        else:
+            yOuts += 1
+        if board.p >= 2:
+            print(yScore, yOuts)
+    if xScore > yScore:
+        print(x.team, x.idLine(), 'Wins!', str(xScore)+'-'+str(yScore))
+        return x
+    elif yScore > xScore:
+        print(y.team, y.idLine(), 'Wins!', str(yScore)+'-'+str(xScore))
+        return y
+    else:
+        swings = 0
+        while swings < 3 or xScore == yScore:
+            if hrdPitch(x, board) == True:
+                xScore += 1
+            if hrdPitch(y, board) == True:
+                yScore += 1
+            swings += 1
+            if board.p >= 2:
+                print(x, xScore, y, yScore)
+        if xScore > yScore:
+            print(x.team, x.idLine(), 'Wins!', str(xScore)+'-'+str(yScore), 'after', swings, 'extra swings')
+            return x
+        elif yScore > xScore:
+            print(y.team, y.idLine(), 'Wins!', str(yScore)+'-'+str(xScore), 'after', swings, 'extra swings')
+            return y
+
+
 def allstarGame(gp):  # I thought it would be fun
+    AShost = random.choice(MLBt)
+    print('ALL-STAR WEEKEND HOSTED BY', AShost)
     (NLh, NLp, ALh, ALp) = buildPDFs()
     # Set up the stats
     NLp['IP'] = [i.IP for i in list(NLp['Name'])]
@@ -419,8 +506,17 @@ def allstarGame(gp):  # I thought it would be fun
     ALp['ERA'] = [i.ERA for i in list(ALp['Name'])]
     NLh['PA'] = [i.PA for i in list(NLh['Name'])]
     NLh['OPS'] = [i.OPS for i in list(NLh['Name'])]
-    ALh['PA'] = [i.PA for i in list(NLh['Name'])]
-    ALh['OPS'] = [i.OPS for i in list(NLh['Name'])]
+    NLh['HR'] = [i.HR for i in list(NLh['Name'])]
+    ALh['PA'] = [i.PA for i in list(ALh['Name'])]
+    ALh['OPS'] = [i.OPS for i in list(ALh['Name'])]
+    ALh['HR'] = [i.HR for i in list(ALh['Name'])]
+    # HR derby contestants
+    NLh.sort_values(['HR', 'OPS'], inplace=True, ascending=False)
+    ALh.sort_values(['HR', 'OPS'], inplace=True, ascending=False)
+    nlHRD = NLh.iloc[0:4, 0]
+    alHRD = ALh.iloc[0:4, 0]
+    hrDerby(list(nlHRD), list(alHRD), AShost)
+    # Now the real AS stuff
     NLh.sort_values(['OPS'], inplace=True, ascending=False)
     ALh.sort_values(['OPS'], inplace=True, ascending=False)
     NLp.sort_values(['ERA'], inplace=True, ascending=True)
@@ -462,11 +558,15 @@ def allstarGame(gp):  # I thought it would be fun
     ALAllStars.lineupCard.starters = pandas.concat([ALbatting, pandas.DataFrame([[ALstarter, ALstarter.team, 'SP',
         ALstarter.overall, ALstarter.ERA]],columns=['Name', 'Team', 'Position','Offense', 'OPS'])],ignore_index=True)
     # Play the game
-    ASTeams = [NLAllStars, ALAllStars]
+    if AShost in NLt:
+        ASTeams = [NLAllStars, ALAllStars]
+        NLAllStars.hostABR = AShost.ABR
+    else:
+        ASTeams = [ALAllStars, NLAllStars]
+        ALAllStars.hostABR = AShost.ABR
     for i in ASTeams:
         i.setTeam()
-    random.shuffle(ASTeams)
-    game(ASTeams[0], ASTeams[1], p=2)
+    game(ASTeams[0], ASTeams[1], p=2, stam=25)
     if NLAllStars.wins > 0:
         print('NATIONAL LEAGUE WINS')
         return 'NL'
@@ -631,57 +731,126 @@ def offseason(year, p, holdovers):
         teamFAs = i.reset()
         freeAgents = pandas.concat([freeAgents, teamFAs], ignore_index=True)
         i.prospectsAvailable()
-    freeAgents = pandas.concat([freeAgents, holdovers])
-    go = True
-    roundNum = 0
-    while go:
-        if roundNum > 10:
-            p = 2
-        if p > 0:
-            print('ROUND', roundNum+1)
-        go = False
-        for i in NLt+ALt:
-            i.needCheck()
-            if i.needs[0] > 0 or i.needs[2] > 0 or i.needs[3] > 0:
-                go = True
-                if p > 1:
-                    print(i.ABR, *i.needs)
-                i.contractBundle(freeAgents, roundNum, year, p)
-        if p > 0:
-            print('Prospect Deals')
-        for i in NLt + ALt:
-            for j in i.prospects['Name']:
-                sign = j.acceptDeal()
+    if faFormat == 1:  # EXCEL THING
+        freeAgents = pandas.concat([freeAgents, holdovers])
+        go = True
+        roundNum = 0
+        while go:
+            if roundNum > 10:
+                p = 2
+            if p > 0:
+                print('ROUND', roundNum+1)
+            go = False
+            for i in NLt+ALt:
+                i.needCheck()
+                if i.needs[0] > 0 or i.needs[2] > 0 or i.needs[3] > 0:
+                    go = True
+                    if p > 1:
+                        print(i.ABR, *i.needs)
+                    i.contractBundle(freeAgents, roundNum, year, p)
+            if p > 0:
+                print('Prospect Deals')
+            for i in NLt + ALt:
+                for j in i.prospects['Name']:
+                    sign = j.acceptDeal()
+                    if sign is not None:
+                        pDeals += 1
+                        if isinstance(j, Hitter) and p > 0:
+                            print(j.pos + '/' + j.secondary, j.smallLine(), 'signs with', sign[0], 'for', sign[1], 'years',
+                                  sign[2], 'AAV')
+                        elif p > 0:
+                            print(j.pos+'   ', j.smallLine(), 'signs with', sign[0], 'for', sign[1], 'years', sign[2], 'AAV')
+                        i.prospects.drop(i.prospects[i.prospects['Name'] == j].index, inplace=True)
+                        i.prospects.reset_index(drop=True, inplace=True)
+            if p > 0:
+                print('FA Deals')
+            for i in freeAgents['Name']:
+                sign = i.acceptDeal()
                 if sign is not None:
-                    pDeals += 1
-                    if isinstance(j, Hitter) and p > 0:
-                        print(j.pos + '/' + j.secondary, j.smallLine(), 'signs with', sign[0], 'for', sign[1], 'years',
-                              sign[2], 'AAV')
+                    if isinstance(i, Hitter) and p > 0:
+                        print(i.idLine(), 'signs with', sign[0], 'for', sign[1], 'years', sign[2], 'AAV')
                     elif p > 0:
-                        print(j.pos+'   ', j.smallLine(), 'signs with', sign[0], 'for', sign[1], 'years', sign[2], 'AAV')
-                    i.prospects.drop(i.prospects[i.prospects['Name'] == j].index, inplace=True)
-                    i.prospects.reset_index(drop=True, inplace=True)
+                        print(i.idLine(), 'signs with', sign[0], 'for', sign[1], 'years', sign[2], 'AAV')
+                    freeAgents.drop(freeAgents[freeAgents['Name'] == i].index, inplace=True)
+            roundNum += 1
         if p > 0:
-            print('FA Deals')
-        for i in freeAgents['Name']:
-            sign = i.acceptDeal()
-            if sign is not None:
-                if isinstance(i, Hitter) and p > 0:
-                    print(i.pos + '/' + i.secondary, i.smallLine(), 'signs with', sign[0], 'for', sign[1], 'years',
-                          sign[2], 'AAV')
-                elif p > 0:
-                    print(i.pos+'   ', i.smallLine(), 'signs with', sign[0], 'for', sign[1], 'years', sign[2], 'AAV')
-                freeAgents.drop(freeAgents[freeAgents['Name'] == i].index, inplace=True)
-        roundNum += 1
-    if p > 0:
-        print('FREE AGENCY IS DONE AFTER', roundNum-1, 'ROUNDS')
+            print('FREE AGENCY IS DONE AFTER', roundNum-1, 'ROUNDS')
+    else:
+        freeAgents.sort_values(['Core', 'OVR'], inplace=True, ignore_index=True, ascending=False)
+        #with alive_bar(len(freeAgents), dual_line=True, title='FAs') as bar:
+        if year <= simYears:
+            for i in alive_it(range(len(freeAgents))):
+                if auctionHelperThing(freeAgents, i, p, year):
+                    break
+        else:
+            for i in range(len(freeAgents)):
+                if auctionHelperThing(freeAgents, i, p, year):
+                    break
+        if p >= 1:
+            print('FILL-IN')
+        for j in MLBt:
+            j.fillIn(p)
     for i in NLt+ALt:
         i.hitters.sort_values(['Overall', 'Offense'], inplace=True, ascending=False)
         i.rotation.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
         i.bullpen.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
         i.setTeam()
         i.lineupCard = Lineup(i.rotation, i.hitters, i.ABR)
+    if p > 0 and faFormat == 1:
+        print(len(freeAgents[freeAgents['Age'] >= 8]), 'have retired')
+    elif p > 0:
+        print(len(freeAgents), 'have retired')
     return freeAgents[freeAgents['Age'] < 8]
+
+
+def auctionHelperThing(freeAgents, i, p, year):
+    # if i%20 == 0:
+    # print(str(i)+'/'+str(len(freeAgents)))
+    if i > 125 and i % 5 == 0:
+        if areWeDone():
+            print('stopping early at', i)
+            return True
+    prospectsOffered = []
+    player = freeAgents.loc[i, 'Name']
+    if p >= 1:
+        print('PLAYER IS:', player.idLine())
+    for j in MLBt:
+        if j.controlled:
+            if i == 0:
+                j.next = 0
+            if j.next == i:
+                offer = j.selfAuction(freeAgents, player, p, year)
+            else:
+                offer = None
+            if j.next == i:
+                j.next += 1
+        else:
+            offer = j.auction(player, p, year)
+        if offer is not None:
+            if offer != player:
+                prospectsOffered.append(offer)
+    for k in [player] + prospectsOffered:
+        sign = k.acceptDeal()
+        if sign is not None:
+            if isinstance(k, Hitter) and p > 0:
+                print(k.idLine(), 'signs with', sign[0], 'for', sign[1], 'years', sign[2], 'AAV')
+            elif p > 0:
+                print(k.idLine(), 'signs with', sign[0], 'for', sign[1], 'years', sign[2], 'AAV')
+            if k == player:
+                freeAgents.drop(freeAgents[freeAgents['Name'] == i].index, inplace=True)
+            sign[0].needCheck()
+            if p >= 2:
+                print(sign[0], 'has remaining budget of', sign[0].budgetRemaining(year), round(sign[0].hitterCon, 1),
+                      round(sign[0].spCon, 1), round(sign[0].rpCon, 1), *sign[0].needs)
+    return False
+
+
+def areWeDone():
+    for i in MLBt:
+        if len(i.hitters) < 13 or len(i.rotation) < 5 or len(i.bullpen) < 8:
+            return False
+    return True
+
 
 
 def holdUpdate(holdovers):

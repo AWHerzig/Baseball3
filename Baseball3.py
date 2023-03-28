@@ -24,42 +24,51 @@ from DirectoryWide import *
 from Testing import *
 
 """
+A = Team('AAAAAAAaAAAAAAA', 'NLA')
+B = Team('BBBBBBBBBBBBBBBB', 'ALA')
+A.setTeam(0)
+B.setTeam(0)
+game(A, B, p=1)
 #bigtest()
-#bigtest2()
-#bigtest3()
-#bigtest4H()
-#bigtest4P()
-#bigtest5()
+bigtest2()
+bigtest3()
+bigtest4H()
+bigtest4P()
+bigtest5()
 bigtest6()
 """
-print('Values Key: [Contact, Power, Vision, Hitter Field/Speed, Control, Velocity, Movement, Pitcher Field/Speed]')
+print('Values Key: [Contact, Power, Vision, Hitter Field/Speed, Control, Velocity, Movement, Pitcher Field/Speed, Prospect Boost]')
 for j in Divisions:
     for i in j:
         print(i.name, 'values', i.values, 'with a budget of', i.budget)
     print()
 year = 1
-starter = userStartup()
-print('Loading rosters... (Ignore any warning lines)')
+#starter = userStartup()
+starter = None
+print('Loading rosters... (Sorry this takes a while, simming 5 years of offseason. Ignore any warning lines)')
 cur = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
-while year <= 5:
-    print(str(20*(year-1))+'%')
+while year <= simYears:
+    print('Year', year)
     holdovers = holdUpdate(cur)
     cur = offseason(year, 0, holdovers)
     year += 1
-print('100%')
+print('Rosters built')
 go = 'True'
 offP = 1  # print value for the offseason
 userStartup2(starter)
-#format2()
+if isinstance(starter, Team):
+    holdovers = holdUpdate(cur)
+    cur = offseason(year, offP, holdovers)
+    year += 1
 while go:
-    if isinstance(starter, Team):
-        holdovers = holdUpdate(cur)
-        cur = offseason(year, offP, holdovers)
-        year += 1
-    if schedLength in ['2', '162']:  # This is the kickoff for the whole thing
+    if schedLength in ['3', '162']:  # This is the kickoff for the whole thing
         playIt(schedule162)
-    elif schedLength in ['0', '20']:
+    elif schedLength in ['1', '20']:
         playIt(schedule20)
+    elif schedLength == 'Alt':
+        format2()
+    elif schedLength == '0':
+        playIt(schedule0)
     else:
         playIt(schedule52)
     print()

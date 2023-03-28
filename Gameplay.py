@@ -1,5 +1,6 @@
 from DirectoryWide import *
 from Linked_List3 import *
+from Team import *
 from inputimeout import inputimeout, TimeoutOccurred
 import datetime
 import time
@@ -98,19 +99,20 @@ def findT(accel, velo, pF, pI):  # This is +- in there but I used - cuz it's the
 
 
 def game(home, away, playoff=False, p=0, stam=SPstam):  # p is a print value that informs output, stam input is for ASG
-    board = Scoreboard(home.ABR, p)  # Plays game with home team's walls
+    if isinstance(home, Team):
+        board = Scoreboard(home.ABR, p)  # Plays game with home team's walls
+    else:
+        board = Scoreboard(home.hostABR, p)  # Different from actual team
     home.setLineup()  # Roster rotation, builds strong roster using available players
     away.setLineup()  # I'm not going to advertise best possible, but a good one.
     hlineup = home.lineupCard  # From here in you can read 'hlineup' as 'home team'
     alineup = away.lineupCard
     if home.controlled or away.controlled:
-        board.permP = max(board.p, 1)
+        board.permP = max(board.p, 1)  # p + 1
     if alineup.containsControlled():
-        print('here')
         board.user = alineup.containsControlled()
         board.permP = max(board.p, 2)
     elif hlineup.containsControlled():
-        print('here')
         board.user = hlineup.containsControlled()
         board.permP = max(board.p, 2)
     board.p = board.permP
@@ -188,6 +190,8 @@ def game(home, away, playoff=False, p=0, stam=SPstam):  # p is a print value tha
     else:
         S = None
     W.W += 1
+    if L is None:
+        print('fuck this shit')
     L.L += 1
     if S:
         S.S += 1
@@ -255,7 +259,7 @@ def inning(oTeam, dTeam, side, board, lead, wOff=False):  # Lead is how much the
     ogLead = lead
     lPitcher = None
     board.refresh()
-    if board.user == dTeam.dAlign[1]:
+    if dTeam.dAlign[1].controlled:
         board.p = 4
     # elif board.user in dTeam.dAlign:
         # board.p = 3
@@ -264,13 +268,13 @@ def inning(oTeam, dTeam, side, board, lead, wOff=False):  # Lead is how much the
     while board.outs < 3:
         order = board.hOrder if side == 'h' else board.aOrder
         hitter = offense['Name'].iloc[order]
-        if board.user == hitter:
+        if hitter.controlled:
             board.p = 4
             board.showRunners()
         hitter.PA += 1
         if dTeam.dAlign[1].stamScore < 0:
             changePitcher(dTeam, board, lead + runs)
-            if board.user == dTeam.dAlign[1]:
+            if dTeam.dAlign[1].controlled:
                 board.p = 4
         pitcher = dTeam.dAlign[1]
         hitter.chargedTo = pitcher  # This is for pitcher ERA bc its not who let them score its who put them on base
@@ -393,13 +397,13 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
             choice = int(input('Which preset do you want to throw, first is 0, second is 1, etc. Blank for custom'))
             preset = pitcher.presets[choice]
             pType = preset[0]
-        except ValueError or IndexError:  # If user messes up, so the entire thing doesnt come crashing down
+        except Exception:  # If user messes up, so the entire thing doesnt come crashing down
             preset = None
             print(*pitcher.arsenal)
             try:
                 choiceA = int(input('Which pitch do you want to throw, first is 0, second is 1, etc.'))
                 pType = pitcher.arsenal[choiceA]
-            except:
+            except Exception:
                 pType = random.choice(pitcher.arsenal)
     else:
         preset = None
@@ -413,12 +417,10 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
     Vz = -1 * (baselines[2] + (1 * (pitcher.velo - 5) * mphTOfts))
     Px = pitcher.release[0]  # Starting spot
     Py = pitcher.release[1]
-    distToPlate = rubberToPlate - pitcher.extension
     Pz = rubberToPlate - pitcher.extension  # This one can change, while distToPlate will remain constant
     timeToPlate = - Pz / Vz  # constant velo
     if steal:  # how far they got during the pitch
         board.basepaths[1] = (20 + .5 * board.B1.speed) * (timeToPlate + .9)
-    timeTraveled = 0
     if pitcher.controlled:
         if preset:
             pAtt = preset[1:3]
@@ -427,23 +429,95 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
                 xPick = float(input('X-coordinate aim?'))
                 yPick = float(input('Y-coordinate aim?'))
                 pAtt = [xPick, yPick]
-            except:
+            except Exception:
                 print('Bad input, hung it!')
                 pAtt = [0, 2.5]
     else:
         # pAtt = [baselines[3], baselines[4]]  # Standard spot for given pitch type
         # pAtt = [0, 2.5]
-        pAtt = [random.uniform(-1.1, 1.1), random.uniform(1.1, 3.9)]
+        pAtt = [random.choice([random.uniform(-1, -.35), random.uniform(.35, 1)]),
+                random.choice([random.uniform(1.2, 2.2), random.uniform(2.8, 3.8)])]  # Dont aim down the middle
     pSpot = [numpy.random.normal(pAtt[0], max((17-pitcher.cont)*.02, 0)), numpy.random.normal(pAtt[1], max((17-pitcher.cont)*.04, 0))]
     #print(pSpot)
+    (swing, xSwing, ySwing, zSwing, crossPlate, penalty) = swingyStuff(Ax, Px, Ay, Py, Az, Vz, Pz,
+                                                                       pSpot, hitter, board, steal)
+    # this is split off for HRD^
+    if test3:
+        zone = (-.875 <= crossPlate[0] <= .875) and (1.5 <= crossPlate[1] <= 3.5)
+        if swing is None:
+            whoop = False
+        else:
+            whoop = True
+        return (zone, whoop)
+    if swing is None:  # Swing Adjudication starts here. This is pitch taken
+        if hitter.controlled:
+            dud = input('Just hit enter, here to catch a late swing')
+        if steal:
+            spiked = crossPlate[0] < .5  # Much harder for the catcher to get a clean throw off
+            stealAdj(board, defense[2], spiked)  # defender 2 is the catcher
+        if -.875 <= crossPlate[0] <= .875 and 1.5 <= crossPlate[1] <= 3.5:  # In the strike zone
+            if board.p >= 4:
+                print('Called Strike')
+            return 'strike'
+        else:
+            if board.p >= 4:
+                print('Ball')
+            return 'ball'
+    else:  # This is the engine room, not sure if it really makes any sense
+        offCenter = pythag(xSwing/.875, ySwing - 2.5)  # Edge of the K zone returns 1.
+        contactScore = (13 - (zSwing**2)) * (1.1 - math.sin(min(offCenter, 2) * math.pi * .25)) * math.sqrt(1 + hitter.con*.02)
+        # quad is so 10-hitter gets x2, 0 hitter gets x.5.
+        # Sin so oC of 1 gets you like x.3, dead center is x1, oC of 2 or more goes to 0.
+        if hitter.hand * pitcher.hand == -1:  # Wanted some kind of benefit for this, but I dont really get it
+            contactScore += 1
+        contactScore -= penalty
+        if board.p >= 4:
+            if oLevel:
+                print('Z:', round(zSwing, 2), 'Off-center:', round(offCenter, 2), 'cScore:', round(contactScore, 2))
+            else:
+                print(swingString(zSwing, offCenter, contactScore))
+        if contactScore < 1 or ySwing <= 0:  # So bad of contact there wasn't even contact
+            if steal:
+                spiked = crossPlate[0] < .5
+                stealAdj(board, defense[2],  spiked)
+            return 'whiff'
+        else:  # Bat on Ball action
+            launchAngle = math.radians(numpy.random.normal(25, max(0, 10*(10-contactScore))) + hitter.pow)
+            exitVelo = (4*contactScore + 25*(1.5 + hitter.pow*.02)) * mphTOfts
+            angle = math.radians(numpy.random.normal(45 - hitter.hand*(15*(1 + contactScore/5) + 10*zSwing), 15))  # This is direction
+            # Right now this is pretty whack, so this is subject to change when I figure out a better way to get FBs^
+            if board.p >= 3:
+                if oLevel:
+                    print('Exit Velo:', round(exitVelo, 2), 'Launch Angle:', round(math.degrees(launchAngle), 2), 'Dir. Angle:', round(math.degrees(angle), 2))
+                else:
+                    print('Exit Velo:', round(exitVelo, 2), 'Launch Angle:', round(math.degrees(launchAngle), 2),
+                          'Dir. Angle:', round(math.degrees(angle), 2))
+                    print(contactString(exitVelo, math.degrees(launchAngle), math.degrees(angle)))
+            bip = ballInPlay(exitVelo*math.cos(launchAngle), exitVelo*math.sin(launchAngle), ySwing, angle, defense, board, steal)
+            # if isinstance(bip, list):
+                # testerDF.loc[len(testerDF)] = [contactScore, hitter.pow, bip[1]]
+            # else:
+                # testerDF.loc[len(testerDF)] = [contactScore, hitter.pow, bip]
+            return bip
+            # ^ Look okay, you need to know a lot
+
+
+def swingyStuff(Ax, Px, Ay, Py, Az, Vz, Pz, pSpot, hitter, board, steal):
+    distToPlate = Pz
+    timeToPlate = - Pz / Vz
+    timeTraveled = 0
     Vx = numpy.random.normal(findVinit(Ax, pSpot[0] - Px, timeToPlate), 0)  # The normal doesnt do anything rn
     Vy = numpy.random.normal(findVinit(Ay, pSpot[1] - Py, timeToPlate), 0)  # Used to, kept in case i want it back
     # print(round(Ax, 2), round(Ay, 2), round(Vx, 2), round(Vy, 2), round(Vz, 2))
     Xs = []
     Ys = []
     Zs = []
+    xSwing = 0
+    ySwing = 0
+    zSwing = 0
+    penalty = 0
     PzCopy = Pz
-    crossPlate = [findP(Ax, Vx, Px, timeToPlate), findP(Ay, Vy, Py, timeToPlate)]  # X and Y coordinates at Pz=0
+    crossPlate = pSpot  # X and Y coordinates at Pz=0
     if hitter.controlled:
         while PzCopy > -7:  # Sets up all the locations during the path so you dont have to have the system doing math
             Xs.append(numpy.random.normal(findP(Ax, Vx, Px, timeTraveled), .5 - (.05 * hitter.vis)))
@@ -496,20 +570,13 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
             cpG = [findP(0, xVg, xPg, timeLeftG), findP(gravForce, yVg, yPg, timeLeftG)]  #
             if -.875 <= cpG[0] <= .875 and 1.5 <= cpG[1] <= 3.5:  # If they think it's in the zone
                 swing = ''
-                penalty = 4 * pythag(cpG[0] - crossPlate[0], cpG[1]-crossPlate[1])
+                penalty = 2 * pythag(cpG[0] - crossPlate[0], cpG[1]-crossPlate[1])
                 swingTime = decTime + timeLeftG
                 xSwing = findP(Ax, Vx, Px, swingTime)
                 ySwing = findP(Ay, Vy, Py, swingTime)
                 zSwing = findP(Az, Vz, Pz, swingTime)
                 hitter.swings += 1
                 hitter.zMissT += abs(zSwing)
-    if test3:
-        zone = (-.875 <= crossPlate[0] <= .875) and (1.5 <= crossPlate[1] <= 3.5)
-        if swing is None:
-            whoop = False
-        else:
-            whoop = True
-        return (zone, whoop)
     # TAKE 1, instead of guessing P and V values, take 1 allowed higher vision players to make decisions later
         # So they could see more of the break
     """  # Tab it out once if you want to use it
@@ -544,57 +611,8 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
         else:
             print(pType, crossPlate)
             print(pType, locString(crossPlate, hitter.hand))
-    if swing is None:  # Swing Adjudication starts here. This is pitch taken
-        if hitter.controlled:
-            dud = input('Just hit enter, here to catch a late swing')
-        if steal:
-            spiked = crossPlate[0] < .5  # Much harder for the catcher to get a clean throw off
-            stealAdj(board, defense[2], spiked)  # defender 2 is the catcher
-        if -.875 <= crossPlate[0] <= .875 and 1.5 <= crossPlate[1] <= 3.5:  # In the strike zone
-            if board.p >= 4:
-                print('Called Strike')
-            return 'strike'
-        else:
-            if board.p >= 4:
-                print('Ball')
-            return 'ball'
-    else:  # This is the engine room, not sure if it really makes any sense
-        offCenter = pythag(xSwing/.875, ySwing - 2.5)  # Edge of the K zone returns 1.
-        contactScore = (13 - (zSwing**2)) * (1.1 - math.sin(min(offCenter, 2) * math.pi * .25)) * math.sqrt(1.1 + hitter.con*.01)
-        # quad is so 10-hitter gets x2, 0 hitter gets x.5.
-        # Sin so oC of 1 gets you like x.3, dead center is x1, oC of 2 or more goes to 0.
-        if hitter.hand * pitcher.hand == -1:  # Wanted some kind of benefit for this, but I dont really get it
-            contactScore += 1
-        contactScore -= penalty
-        if board.p >= 4:
-            if oLevel:
-                print('Z:', round(zSwing, 2), 'Off-center:', round(offCenter, 2), 'cScore:', round(contactScore, 2))
-            else:
-                print(swingString(zSwing, offCenter, contactScore))
-        if contactScore < 1 or ySwing <= 0:  # So bad of contact there wasn't even contact
-            if steal:
-                spiked = crossPlate[0] < .5
-                stealAdj(board, defense[2],  spiked)
-            return 'whiff'
-        else:  # Bat on Ball action
-            launchAngle = math.radians(numpy.random.normal(25, max(0, 10*(10-contactScore))) + hitter.pow)
-            exitVelo = (4*contactScore + 25*(1.5 + hitter.pow*.02)) * mphTOfts
-            angle = math.radians(numpy.random.uniform(-45, 135))  # This is direction, like to left field or right field
-            # Right now this is pretty whack, so this is subject to change when I figure out a better way to get FBs^
-            if board.p >= 3:
-                if oLevel:
-                    print('Exit Velo:', round(exitVelo, 2), 'Launch Angle:', round(math.degrees(launchAngle), 2), 'Dir. Angle:', round(math.degrees(angle), 2))
-                else:
-                    print('Exit Velo:', round(exitVelo, 2), 'Launch Angle:', round(math.degrees(launchAngle), 2),
-                          'Dir. Angle:', round(math.degrees(angle), 2))
-                    print(contactString(exitVelo, math.degrees(launchAngle), math.degrees(angle)))
-            bip = ballInPlay(exitVelo*math.cos(launchAngle), exitVelo*math.sin(launchAngle), ySwing, angle, defense, board, steal)
-            # if isinstance(bip, list):
-                # testerDF.loc[len(testerDF)] = [contactScore, hitter.pow, bip[1]]
-            # else:
-                # testerDF.loc[len(testerDF)] = [contactScore, hitter.pow, bip]
-            return bip
-            # ^ Look okay, you need to know a lot
+    return (swing, xSwing, ySwing, zSwing, crossPlate, penalty)
+
 
 
 def ballInPlay(Vx, Vy, height, angle, defense, board, steal):
@@ -606,7 +624,7 @@ def ballInPlay(Vx, Vy, height, angle, defense, board, steal):
     distTraveled = Vx * timeInAir  # For now no drag, but I might add it so I can have "Coors!"
     wallSegment = clamp(int(angle // (math.pi/10)), 0, 4)
     wallDist = board.stadium[4 - wallSegment]
-    if distTraveled > wallDist and not foulBall:  # Im gonna add a thing about needed to be like 8 feet high at the wall
+    if findP(gravForce, Vy, height, wallDist / Vx) > 10 and not foulBall:  # Im gonna add a thing about needed to be like 8 feet high at the wall
         if board.p >= 3:
             print('That ball is gone! Hit', round(distTraveled, 1), 'feet. Wall is', wallDist, 'feet.')
         return 'Home Run'
@@ -722,7 +740,6 @@ def pickupBall(Vx, dist, angle, defense, startTime, wallDist):  # Has hit the gr
     while timeSinceHit < 1000000000:  # Just goes until returned
         ballPos = min(findP(frictionDecel, Vx, dist, timeSinceHit), wallDist)  # Currently no bouncing it just rolls
         closestToSpot(spots, ballPos, angle)
-        #print(spots)
         for i in spots:
             player = defense[i]
             startSpot = positions[posNotation[i]]
@@ -1223,10 +1240,10 @@ def changePitcher(lineup, board, lead):  # Brings in a reliever
             newPitcher = lineup.bullpen[lineup.bullpen['Available'] == True].iloc[0]['Name']
             newPitcher.available = False
         elif board.inning == 7:  # Setup man, 2nd best
-            newPitcher = lineup.bullpen[lineup.bullpen['Available'] == True].iloc[1]['Name']
+            newPitcher = lineup.bullpen[lineup.bullpen['Available'] == True].iloc[min(1, len(lineup.bullpen) + 1)]['Name']
             newPitcher.available = False
         else:  # 3rd best for the rest
-            hold = lineup.bullpen[lineup.bullpen['Available'] == True].iloc[2]
+            hold = lineup.bullpen[lineup.bullpen['Available'] == True].iloc[min(2, len(lineup.bullpen) + 1)]
             if hold is not None:
                 newPitcher = hold['Name']
             else:
@@ -1234,12 +1251,17 @@ def changePitcher(lineup, board, lead):  # Brings in a reliever
             newPitcher.available = False
         newPitcher.stamScore = RPstam
         lineup.bullpen['Available'] = [i.available for i in list(lineup.bullpen['Name'])]
-    except IndexError or TypeError:  # Brings in tomorrow's starter and pushes the rotation up a day.
-        # print('Caught an error')
+    except Exception:  # Brings in tomorrow's starter and pushes the rotation up a day.
+        print('PUSHSHSHSHSHSHSHSHSHSSH')
         # print(board.inning, lineup.bullpen)
-        newPitcher = lineup.rotation.iloc[lineup.rotMarker]['Name']
-        lineup.rotMarker = (lineup.rotMarker + 1) % 5
-        newPitcher.stamScore = 100
+        if isinstance(lineup, Lineup):
+            newPitcher = lineup.rotation.iloc[lineup.rotMarker]['Name']
+            lineup.rotMarker = (lineup.rotMarker + 1) % 5
+            newPitcher.stamScore = 100
+        else:  # AS teams can't go to the next days starter
+            newPitcher = Pitcher('Dummy Dum Dum  ', 'RP', top=1)
+            newPitcher.team = lineup.ABR
+            newPitcher.stamScore = 100
     if board.p >= 2:
         print(newPitcher, 'is entering the game')
     if oldPitcher.saveOp and lead < 0:
@@ -1320,3 +1342,46 @@ def statsHelp(res, hitter, pitcher):  # For balls in play
     elif res == 'SF':
         hitter.SF += 1
         pitcher.stamScore += 2
+
+
+def hrdPitch(hitter, board):
+    (Ax, Ay, Az) = (0, gravForce, 0)
+    (Px, Py, Pz) = (0, 6, 60.6)
+    pSpot = [numpy.random.normal(0, .2), numpy.random.normal(2.5, .3)]
+    Vz = 65 * mphTOfts
+    steal = None
+    (swing, xSwing, ySwing, zSwing, crossPlate, penalty) = swingyStuff(Ax, Px, Ay, Py, Az, Vz, Pz,
+                                                                       pSpot, hitter, board, steal)
+    if swing is None:
+        return ''
+    else:
+        offCenter = pythag(xSwing / .875, ySwing - 2.5)  # Edge of the K zone returns 1.
+        contactScore = (13 - (zSwing**2)) * (1.1 - math.sin(min(offCenter, 2) * math.pi * .25)) * math.sqrt(1.1 + hitter.con*.01)
+        launchAngle = math.radians(numpy.random.normal(25, max(0, 10 * (10 - contactScore))) + hitter.pow)
+        exitVelo = (4 * contactScore + 20 * (1.5 + hitter.pow * .02)) * mphTOfts
+        angle = math.radians(numpy.random.normal(45 - hitter.hand * (15 + 10 * zSwing), 15))
+        Vx = exitVelo*math.cos(launchAngle)
+        Vy = exitVelo*math.sin(launchAngle)
+        height = 2.5
+        foulBall = angle < 0 or angle > math.pi / 2 or Vx < 0  # gosh i hate radians, last one is fouled back
+        timeInAir = findT(gravForce, Vy, 0, height)
+        distTraveled = Vx * timeInAir  # For now no drag, but I might add it so I can have "Coors!"
+        wallSegment = clamp(int(angle // (math.pi / 10)), 0, 4)
+        wallDist = board.stadium[4 - wallSegment]
+        if findP(gravForce, Vy, height, wallDist / Vx) > 10 and not foulBall:  # Im gonna add a thing about needed to be like 8 feet high at the wall
+            if board.p >= 2:
+                print(hitter, ': That ball is gone! Hit', round(distTraveled, 1), 'feet. Wall is', wallDist, 'feet.', findP(gravForce, Vy, height, wallDist / Vx))
+            return True
+        elif distTraveled > wallDist and not foulBall:
+            if board.p >= 2:
+                print(hitter, ': Off the Wall! Hit', round(distTraveled, 1), 'feet. Wall is', wallDist, 'feet.', findP(gravForce, Vy, height, wallDist / Vx))
+            return False
+        elif foulBall:
+            if board.p >= 2:
+                print(hitter, ': Fouled off', round(distTraveled, 1), 'feet.')
+            return False
+        else:
+            if board.p >= 2:
+                print(hitter, ': Ball is short! Hit', round(distTraveled, 1), 'feet. Wall is', wallDist, 'feet.', findP(gravForce, Vy, height, wallDist / Vx))
+            return False
+
