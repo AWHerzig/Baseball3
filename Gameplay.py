@@ -134,6 +134,7 @@ def game(home, away, playoff=False, p=0, stam=SPstam):  # p is a print value tha
         if board.p >= 2:
             print('TOP', board.inning, away.ABR, 'is hitting.', away.ABR, str(aF)+'-'+str(hF), home.ABR)
         inns.append(board.inning)
+        closerCheck(hlineup, board, hF-aF)
         aE = inning(alineup, hlineup, 'a', board, lead=aF-hF)  # Returns the score from that inning. Future might also include hits
         aScore.append(aE[0])
         aF += aE[0]
@@ -162,6 +163,7 @@ def game(home, away, playoff=False, p=0, stam=SPstam):  # p is a print value tha
         elif board.inning < 9:
             hE = inning(hlineup, alineup, 'h', board, lead=hF-aF)
         else:  # Bottom 9 with home team not winning already means walkoff is in play.
+            closerCheck(alineup, board, aF - hF)
             hE = inning(hlineup, alineup, 'h', board, lead=hF-aF, wOff=True)
         hScore.append(hE[0])
         if isinstance(hE[0], int):  # bc it might be 'x' and that'll just blow everything up
@@ -1236,7 +1238,7 @@ def fastForward(board):  # If you got a text from Aidan late one night saying
 def changePitcher(lineup, board, lead):  # Brings in a reliever
     oldPitcher = lineup.dAlign[1]
     try:  # Can only use Available pitchers, so there might not be enough and it'll throw an error
-        if board.inning >= 8:  # Closer, bring in the best reliever available
+        if board.inning >= 8 and 2 >= lead >= -4:  # Closer, bring in the best reliever available
             newPitcher = lineup.bullpen[lineup.bullpen['Available'] == True].iloc[0]['Name']
             newPitcher.available = False
         elif board.inning == 7:  # Setup man, 2nd best
@@ -1252,7 +1254,7 @@ def changePitcher(lineup, board, lead):  # Brings in a reliever
         newPitcher.stamScore = RPstam
         lineup.bullpen['Available'] = [i.available for i in list(lineup.bullpen['Name'])]
     except Exception:  # Brings in tomorrow's starter and pushes the rotation up a day.
-        print('PUSHSHSHSHSHSHSHSHSHSSH')
+        #print('PUSHSHSHSHSHSHSHSHSHSSH')
         # print(board.inning, lineup.bullpen)
         if isinstance(lineup, Lineup):
             newPitcher = lineup.rotation.iloc[lineup.rotMarker]['Name']
@@ -1277,6 +1279,25 @@ def changePitcher(lineup, board, lead):  # Brings in a reliever
     else:
         newPitcher.saveOp = False
     lineup.relieversUsed.append(newPitcher)
+
+
+def closerCheck(lineup, board, lead):
+    if board.inning >= 9 and 0 < lead < 4 and lineup.closer.available:
+        newPitcher = lineup.closer
+        oldPitcher = lineup.dAlign[1]
+        if board.p >= 2:
+            print(newPitcher, 'is entering the game')
+        if oldPitcher.saveOp and lead < 0:
+            if board.p >= 2:
+                print('Hold:', oldPitcher)
+            oldPitcher.Hold += 1
+        lineup.dAlign[1] = newPitcher  # Actually puts them in the game
+        newPitcher.saveOp = True
+        newPitcher.SO += 1
+        if board.p >= 2:
+            print('This is a save situation.')
+        lineup.relieversUsed.append(newPitcher)
+        newPitcher.stamScore = 30
 
 
 def stealDec(board):  # Runners may steal second

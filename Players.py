@@ -83,9 +83,9 @@ class Pitcher:
         return self.pos + '    ' + self.name + '(' + str(self.age) + ';' + str(self.cont) + ',' + str(self.velo) + ',' + str(self.move) + ',' + str(self.field) + ',' + str(self.speed) + ')'
 
     def bigLine(self):
-        return self.name + '(' + str(self.age) + ';' + str(self.cont) + ',' + str(self.velo) + ',' + str(self.move) \
-               + ') ' + str(self.IP) + 'IP, ' + self.record() + ', ' + str(self.S + self.Hold) + '/' + str(self.SO) + ' S+H, ' + \
-               str(self.ERA) + 'ERA, ' + str(self.WHIP) + 'WHIP, ' + str(self.Kp) + 'K%'
+        return f'{self.team} {self.pos}    {self.name} ({self.age};{self.cont},{self.velo},{self.move},{self.field},{self.speed}):' \
+               f' {self.IP} IP, {self.record()}, {self.S} Saves, {round((self.S+self.Hold) / self.SO, 2) if self.SO > 0 else 0} S+H%, {self.ERA} ERA,' \
+               f' {self.WHIP} WHIP, {self.Kp} K%'
 
     def canGetThere(self, dist, time):
         return dist < (17 + .5 * self.speed) * max(time - 1.1 + (.05*self.field), 0) + (1 + .5*self.field)
@@ -330,9 +330,9 @@ class Hitter:
                str(self.pow) + ',' + str(self.vis) + ',' + str(self.field) + ',' + str(self.speed) + ')'
 
     def bigLine(self):
-        return self.name + '(' + str(self.age) + ';' + str(self.con) + ',' + str(self.pow) + ',' + str(self.vis) + ') '\
-               + str(self.PA) + ' PA, ' + self.slash + ', ' + str(self.HR) + 'HR, ' + str(self.SB) + '/' \
-               + str(self.SB + self.CS) + 'SB, ' + str(self.RBI) + 'RBI'
+        return f'{self.team} {self.pos}/{self.secondary} {self.name} ({self.age};{self.con},{self.pow},{self.vis},{self.field},{self.speed}):' \
+               f' {self.PA} PA, {self.slash}, {self.HR} HR, {self.SB}/{self.SB+self.CS} SB, {self.RBI} RBI, '
+
 
     def canGetThere(self, dist, time):
         if self.outOfPos:

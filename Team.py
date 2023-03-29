@@ -896,6 +896,7 @@ class Lineup:  # Lineup card, gets called within the game
         self.bullpen = None
         self.rotMarker = 0
         self.starter = None
+        self.closer = None
         self.relieversUsed = []
 
     def reset(self):  # Before games
@@ -994,6 +995,7 @@ class ASLineup:
         self.dAlign = defense
         self.battingOrder = hitters
         self.bullpen = bullpen
+        self.closer = None
         self.relieversUsed = []
         self.starters = None
 

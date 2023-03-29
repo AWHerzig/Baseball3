@@ -537,6 +537,7 @@ def allstarGame(gp):  # I thought it would be fun
     NLbatting.loc[len(NLbatting)] = [NLdh, NLdh.team, 'DH', NLdh.offense, NLdh.OPS]
     NLbatting.sort_values(['Offense', 'OPS'], ascending=False, inplace=True)
     NLAllStars = ASTeam('National League AS   ', 'NLA', NLdefense, NLbatting, NLbullpen)
+    NLAllStars.lineupCard.closer = NLbullpen.iloc[0,0]
     NLAllStars.lineupCard.starters = pandas.concat([NLbatting, pandas.DataFrame([[NLstarter, NLstarter.team, 'SP',
         NLstarter.overall, NLstarter.ERA]], columns=['Name', 'Team', 'Position', 'Offense', 'OPS'])], ignore_index=True)
     # AL
@@ -555,6 +556,7 @@ def allstarGame(gp):  # I thought it would be fun
     ALbatting.loc[len(ALbatting)] = [ALdh, ALdh.team, 'DH', ALdh.offense, ALdh.OPS]
     ALbatting.sort_values(['Offense', 'OPS'], ascending=False, inplace=True)
     ALAllStars = ASTeam('American League AS   ', 'ALA', ALdefense, ALbatting, ALbullpen)
+    ALAllStars.lineupCard.closer = ALbullpen.iloc[0, 0]
     ALAllStars.lineupCard.starters = pandas.concat([ALbatting, pandas.DataFrame([[ALstarter, ALstarter.team, 'SP',
         ALstarter.overall, ALstarter.ERA]],columns=['Name', 'Team', 'Position','Offense', 'OPS'])],ignore_index=True)
     # Play the game
@@ -604,26 +606,26 @@ def endOfYear(gp):
     print('End of year statistical leaders')
     print('Pitching-NL')
     NLp.sort_values(['IP'], inplace=True, ascending=False)
-    print(NLp[NLp['IP'] >= gp].head())
+    print(NLp.head())
     NLp.sort_values(['ERA'], inplace=True, ascending=True)
     print(NLp[NLp['IP'] >= gp].head())
     NLp.sort_values(['W'], inplace=True, ascending=False)
-    print(NLp[NLp['IP'] >= gp].head())
+    print(NLp.head())
     NLp.sort_values(['S'], inplace=True, ascending=False)
-    print(NLp[NLp['IP'] >= gp].head())
+    print(NLp.head())
     NLp.sort_values(['WHIP'], inplace=True, ascending=True)
     print(NLp[NLp['IP'] >= gp].head())
     NLp.sort_values(['K%'], inplace=True, ascending=False)
     print(NLp[NLp['IP'] >= gp].head())
     print('Pitching-AL')
     ALp.sort_values(['IP'], inplace=True, ascending=False)
-    print(ALp[ALp['IP'] >= gp].head())
+    print(ALp.head())
     ALp.sort_values(['ERA'], inplace=True, ascending=True)
     print(ALp[ALp['IP'] >= gp].head())
     ALp.sort_values(['W'], inplace=True, ascending=False)
-    print(ALp[ALp['IP'] >= gp].head())
+    print(ALp.head())
     ALp.sort_values(['S'], inplace=True, ascending=False)
-    print(ALp[ALp['IP'] >= gp].head())
+    print(ALp.head())
     ALp.sort_values(['WHIP'], inplace=True, ascending=True)
     print(ALp[ALp['IP'] >= gp].head())
     ALp.sort_values(['K%'], inplace=True, ascending=False)
@@ -632,16 +634,25 @@ def endOfYear(gp):
     NLh.sort_values(['OPS'], inplace=True, ascending=False)
     print(NLh[NLh['PA'] >= 3*gp].head())
     NLh.sort_values(['HR'], inplace=True, ascending=False)
-    print(NLh[NLh['PA'] >= 3*gp].head())
+    print(NLh.head())
     NLh.sort_values(['SB'], inplace=True, ascending=False)
-    print(NLh[NLh['PA'] >= 3*gp].head())
+    print(NLh.head())
     print('Hitting-AL')
     ALh.sort_values(['OPS'], inplace=True, ascending=False)
     print(ALh[ALh['PA'] >= 3*gp].head())
     ALh.sort_values(['HR'], inplace=True, ascending=False)
-    print(ALh[ALh['PA'] >= 3*gp].head())
+    print(ALh.head())
     ALh.sort_values(['SB'], inplace=True, ascending=False)
-    print(ALh[ALh['PA'] >= 3*gp].head())
+    print(ALh.head())
+    for i in MLBt:
+        if i.controlled or i in NLEt:
+            print('Your Team')
+            for j in i.hitters['Name']:
+                print(j.bigLine())
+            for j in i.rotation['Name']:
+                print(j.bigLine())
+            for j in i.bullpen['Name']:
+                print(j.bigLine())
 
 
 def bracket(teams):  # Derpy as hell but I like how it looks this way
@@ -796,6 +807,7 @@ def offseason(year, p, holdovers):
         i.bullpen.sort_values(['Core', 'Extension'], inplace=True, ascending=False)
         i.setTeam()
         i.lineupCard = Lineup(i.rotation, i.hitters, i.ABR)
+        i.lineupCard.closer = i.bullpen.iloc[0, 0]
     if p > 0 and faFormat == 1:
         print(len(freeAgents[freeAgents['Age'] >= 8]), 'have retired')
     elif p > 0:

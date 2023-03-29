@@ -43,9 +43,9 @@ for j in Divisions:
         print(i.name, 'values', i.values, 'with a budget of', i.budget)
     print()
 year = 1
-#starter = userStartup()
-starter = None
-print('Loading rosters... (Sorry this takes a while, simming 5 years of offseason. Ignore any warning lines)')
+starter = userStartup()
+#starter = None
+print(f'Loading rosters... (Sorry this takes a while, simming {simYears} years of offseason. Ignore any warning lines)')
 cur = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
 while year <= simYears:
     print('Year', year)
