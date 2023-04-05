@@ -357,6 +357,9 @@ class Team:
             try:
                 salary = float(input('AAV offer?'))
                 duration = int(input('How many years is the contract'))
+                if duration >= 5:
+                    if not input(f'Did you mean to offer a {duration} year contract? Anything for yes, blank for revoke offer'):
+                        raise ValueError
                 player.offers.append([self, duration, salary])
                 if input('Input anything to set a next value'):
                     self.next = int(input('What is the next value?'))
@@ -367,31 +370,38 @@ class Team:
                 print('Caught bad input. no offer, sorry.')
                 return None
         elif input('Input anything to offer a corresponding prospect'):
-            if isinstance(player, Hitter):
-                loc = int(input('Input the key of hitter prospect you wish to offer a contract'))
-                prospect = hp.loc[loc].Name
-                salary = 2
-                duration = 3
-            elif player.pos == 'SP':
-                loc = int(input('Input the key of starter prospect you wish to offer a contract'))
-                prospect = sp.loc[loc].Name
-                salary = 2
-                duration = 3
-            else:
-                loc = int(input('Input the key of relief prospect you wish to offer a contract'))
-                prospect = rp.loc[loc].Name
-                salary = 2
-                duration = 3
-            self.prospects.drop(self.prospects[self.prospects['Name'] == prospect].index, inplace=True)
-            self.prospects.reset_index(drop=True, inplace=True)
-            prospect.offers.append([self, duration, salary])
-            if input('Input anything to set a next value'):
-                self.next = int(input('What is the next value?'))
-            if p >= 2:
-                print(self.name, 'offer a', duration, 'year,', salary, 'AAV contract to', prospect.idLine())
-            return prospect  # Offer a contract to the player
+            try:
+                if isinstance(player, Hitter):
+                    loc = int(input('Input the key of hitter prospect you wish to offer a contract'))
+                    prospect = hp.loc[loc].Name
+                    salary = 2
+                    duration = 3
+                elif player.pos == 'SP':
+                    loc = int(input('Input the key of starter prospect you wish to offer a contract'))
+                    prospect = sp.loc[loc].Name
+                    salary = 2
+                    duration = 3
+                else:
+                    loc = int(input('Input the key of relief prospect you wish to offer a contract'))
+                    prospect = rp.loc[loc].Name
+                    salary = 2
+                    duration = 3
+                self.prospects.drop(self.prospects[self.prospects['Name'] == prospect].index, inplace=True)
+                self.prospects.reset_index(drop=True, inplace=True)
+                prospect.offers.append([self, duration, salary])
+                if input('Input anything to set a next value'):
+                    self.next = int(input('What is the next value?'))
+                if p >= 2:
+                    print(self.name, 'offer a', duration, 'year,', salary, 'AAV contract to', prospect.idLine())
+                return prospect  # Offer a contract to the player
+            except ValueError:
+                print('Caught bad input. no offer, sorry.')
+                return None
         elif input('Input anything to set a next value'):
-            self.next = int(input('What is the next value?'))
+            try:
+                self.next = int(input('What is the next value?'))
+            except ValueError:
+                print('Bad input, no next value.')
             return None
         else:
             return None

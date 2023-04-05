@@ -17,8 +17,39 @@ import pandas
 # 4 Pitch-by-Pitch
 testerDF = pandas.DataFrame(columns=['CScore', 'Power', 'Result'])
 
+baseMatrix = pandas.DataFrame(numpy.array([[0, .66, 1.05, 1.24, 1.39, 1.68, 1.92, 1.72, 2.53],
+                                           [1, .35, .61, .73, .97, 1.09, 1.35, 1.16, 1.76],
+                                            [2, .13, .26, .31, .5, .51, .65, .6, .94],
+                                           [3, 0, 0, 0, 0, 0, 0, 0, 0],
+                                           [4, 0, 0, 0, 0, 0, 0, 0, 0]]),  # Just in case
+                              columns=['OUTS', '', '1', '2', '3', '12', '23', '13', '123'])
+baseMatrix.set_index('OUTS', drop=True, inplace=True)
+wRuns = {'K': -.15, 'BB': .39, 'Home Run': 1.53, 'single': .47, 'double': .75, 'triple': 1.09, 'IPHR': 1.53, 'SF': -.15, 'out': -.15,
+           'FC': -.15, 'DP': -.15, 'LO': -.15, 'FO': -.15, 'GO': -.15, 'Pop Out': -.15, 'Foul Out': -.15}  #SF just not common enough
+
 # oLevel = input('Just hit enter for general (more readable) level 3+ output, enter anything for detailed')
 oLevel = ''
+resDict = {'K': 8, 'BB': 5, 'Home Run': 4, 'single': 1, 'double': 2, 'triple': 3, 'IPHR': 4, 'SF': 7, 'out': 8,
+           'FC': 8, 'DP': 6, 'LO': 8, 'FO': 8, 'GO': 8, 'Pop Out': 8, 'Foul Out': 8}
+weights = pandas.DataFrame(columns=['PA', 'S', 'D', 'T', 'HR', 'BB', 'DP', 'SF', 'OUT', 'RUNS'])
+bases = pandas.DataFrame(columns=['OUTS', '', '1', '2', '3', '12', '23', '13', '123'])
+basesAtt = pandas.DataFrame(columns=['OUTS', '', '1', '2', '3', '12', '23', '13', '123'])
+for i in range(3):
+    bases.loc[i] = [i, 0, 0, 0, 0, 0, 0, 0, 0]
+    basesAtt.loc[i] = [i, 0, 0, 0, 0, 0, 0, 0, 0]
+basesFinal = pandas.DataFrame(columns=['OUTS', '___', '1__', '_2_', '__3', '12_', '_23', '1_3', '123'])
+builder = False
+
+
+def gameplayEOY():
+    for i in range(3):
+        basesFinal.loc[i] = [i, 0, 0, 0, 0, 0, 0, 0, 0]
+        for j in range(1, 9):
+            basesFinal.iloc[i, j] = round(bases.iloc[i, j] / basesAtt.iloc[i, j], 2)
+    basesFinal.set_index('OUTS', drop=True, inplace=True)
+    with pandas.ExcelWriter('weightedRuns.xlsx') as writer:
+        weights.to_excel(writer, sheet_name='PA Results')
+        basesFinal.to_excel(writer, sheet_name='Bases')
 
 
 class Scoreboard:  # Like the sheet from curling, carries everything from function that you need.
@@ -42,6 +73,8 @@ class Scoreboard:  # Like the sheet from curling, carries everything from functi
         self.user = None
         self.p = p
         self.permP = p
+        self.basesReached = []
+        self.PAres = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     def refresh(self):  # New inning
         self.strikes = 0
@@ -54,6 +87,7 @@ class Scoreboard:  # Like the sheet from curling, carries everything from functi
         self.force = True
         self.scoring = 'out'
         self.p = self.permP
+        self.basesReached = []
 
     def newPA(self, hit, pitch):  # New P... oh it's right in the name (#comedy)
         self.hitter = hit
@@ -78,6 +112,13 @@ class Scoreboard:  # Like the sheet from curling, carries everything from functi
 
     def count(self):
         return str(self.balls) + '-' + str(self.strikes)
+
+    def baseString(self):
+        bases = ''
+        bases += '1' if self.B1 else ''
+        bases += '2' if self.B2 else ''
+        bases += '3' if self.B3 else ''
+        return bases
 
 
 def findVinit(accel, disp, time):  # KINEEEEEEMATIC EQUATIONS
@@ -208,6 +249,11 @@ def game(home, away, playoff=False, p=0, stam=SPstam):  # p is a print value tha
         else:
             print('W:', W, W.record(), 'L', L, L.record(), 'S: None')
     # Post-Game
+    if builder:
+        board.PAres[9] = hF + aF
+        for spot in range(1, 10):
+            board.PAres[spot] = round(board.PAres[spot] / board.PAres[0], 2)
+        weights.loc[len(weights)] = board.PAres
     hlineup.statsUP()  # Updates stats of all hitters and pitchers
     alineup.statsUP()
     hlineup.usage(playoff)  # Designates who needs a rest day in the next game.
@@ -257,7 +303,7 @@ def game(home, away, playoff=False, p=0, stam=SPstam):  # p is a print value tha
     return away.ABR + ' ' + str(aF) + ' @ ' + str(hF) + ' ' + home.ABR
 
 
-def inning(oTeam, dTeam, side, board, lead, wOff=False):  # Lead is how much the hitting team is winning by, can be -
+def inning(oTeam, dTeam, side, board, lead, wOff=False, xrTest=False):  # Lead is how much the hitting team is winning by, can be -
     ogLead = lead
     lPitcher = None
     board.refresh()
@@ -267,6 +313,8 @@ def inning(oTeam, dTeam, side, board, lead, wOff=False):  # Lead is how much the
         # board.p = 3
     offense = oTeam.battingOrder
     runs = 0
+    sitReached = []  # only used for xrTest
+    PAres = []
     while board.outs < 3:
         order = board.hOrder if side == 'h' else board.aOrder
         hitter = offense['Name'].iloc[order]
@@ -284,7 +332,28 @@ def inning(oTeam, dTeam, side, board, lead, wOff=False):  # Lead is how much the
         if board.p >= 4:
             print(pitcher, 'is pitching. Stamina:', dTeam.dAlign[1].stamScore)
         board.newPA(hitter, pitcher)
+        preRuns = baseMatrix.loc[board.outs, board.baseString()] + runs
+        if xrTest:
+            sitReached.append([board.outs, board.baseString(), runs])
+        if builder:
+            board.basesReached.append([board.outs, board.baseString(), runs])
         res = PA(dTeam.dAlign, hitter, board)
+        if isinstance(res, list) and xrTest:
+            PAres.append(res[1])
+        elif xrTest:
+            PAres.append(res)
+        if isinstance(res, list) and builder:
+            board.PAres[0] += 1
+            board.PAres[resDict[res[1]]] += 1
+        elif builder:
+            board.PAres[0] += 1
+            board.PAres[resDict[res]] += 1
+        if isinstance(res, list):
+            hitter.wR += wRuns[res[1]]
+            pitcher.wR += wRuns[res[1]]
+        else:
+            hitter.wR += wRuns[res]
+            pitcher.wR += wRuns[res]
         if res == 'K':  # 3 true outcomes get their own results
             pitcher.K += 1
             pitcher.OR += 1  # Outs Recorded
@@ -340,6 +409,10 @@ def inning(oTeam, dTeam, side, board, lead, wOff=False):  # Lead is how much the
             if res[1] not in ['out', 'FC', 'DP', 'LO', 'FO', 'GO', 'Pop Out', 'Foul Out']:  # It was a hit (or sac fly).
                 dTeam.dAlign[1].stamScore -= 2  # This gets undone for sac fly
                 statsHelp(res[1], hitter, pitcher)  # all the hits and TB for balls in play
+        postRuns = baseMatrix.loc[board.outs, board.baseString()] + runs
+        addedRuns = postRuns - preRuns
+        hitter.rAdded += addedRuns
+        pitcher.rAdded -= addedRuns
         if board.user == hitter:
             board.p = 3
         if side == 'h':
@@ -361,6 +434,12 @@ def inning(oTeam, dTeam, side, board, lead, wOff=False):  # Lead is how much the
             break
         if board.user == hitter:
             dud = input('end of PA')
+    if xrTest:
+        return (runs, sitReached, PAres)
+    if builder:
+        for k in board.basesReached:
+            bases.loc[k[0], k[1]] += runs - k[2]
+            basesAtt.loc[k[0], k[1]] += 1
     return [runs, lPitcher]
 
 

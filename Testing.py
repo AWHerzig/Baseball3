@@ -1,3 +1,6 @@
+import random
+
+import pandas
 from Players import *
 from Team import *
 from Gameplay import *
@@ -65,6 +68,59 @@ def bigtest6():  # Each level of hitter plays specific level of pitcher and retu
         testing.loc[len(testing)] = test6(i)
     print('hitter is 5, pitcher is 5, fielding is row')
     print(testing)
+
+
+def bigWR():
+    resDict = {'K': 8, 'BB': 5, 'Home Run': 4, 'single': 1, 'double': 2, 'triple': 3, 'IPHR': 4, 'SF': 7, 'out': 8,
+               'FC': 8, 'DP': 6, 'LO': 8, 'FO': 8, 'GO': 8, 'Pop Out': 8, 'Foul Out': 8}
+    weights = pandas.DataFrame(columns=['PA', 'S', 'D', 'T', 'HR', 'BB', 'DP', 'SF', 'OUT', 'RUNS'])
+    bases = pandas.DataFrame(columns=['OUTS', '', '1', '2', '3', '12', '23', '13', '123'])
+    basesAtt = pandas.DataFrame(columns=['OUTS', '', '1', '2', '3', '12', '23', '13', '123'])
+    for i in range(3):
+        bases.loc[i] = [i, 0, 0, 0, 0, 0, 0, 0, 0]
+        basesAtt.loc[i] = [i, 0, 0, 0, 0, 0, 0, 0, 0]
+    for hScore in range(11):
+        print(hScore)
+        hScore = 5
+        for pScore in range(11):
+            pScore = 5
+            for fScore in range(11):
+                fScore = 5
+                board = Scoreboard('STL', 0)  # Busch Field is just like a fairly average park
+                hitter = Hitter(nameGen(), 'H ')
+                (hitter.con, hitter.pow, hitter.vis, hitter.field, hitter.speed) = (hScore, hScore, hScore, hScore, hScore)
+                oLineup = Lineup(None, None, None)
+                oLineup.dAlign = [hitter] * 10
+                for j in range(9):
+                    oLineup.battingOrder.loc[len(oLineup.battingOrder)] = [hitter, 'H ', hScore * 3, hitter.OPS]
+                # Defense
+                pitcher = Pitcher(nameGen(), 'P ', test=True)
+                pitcher.stamScore = 99999999999999
+                (pitcher.cont, pitcher.velo, pitcher.move, pitcher.field, pitcher.speed) = (pScore, pScore, pScore, fScore, fScore)
+                dlineup = Lineup(None, None, None)
+                dlineup.dAlign = [pitcher] * 10
+                smallRes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                for j in range(100):
+                    (runs, basesReached, PAres) = inning(oLineup, dlineup, 'h', board, 0, xrTest=True)
+                    smallRes[9] += runs
+                    for k in basesReached:
+                        bases.loc[k[0], k[1]] += runs - k[2]
+                        basesAtt.loc[k[0], k[1]] += 1
+                    for k in PAres:
+                        smallRes[0] += 1
+                        smallRes[resDict[k]] += 1
+                for spot in range(1, 10):
+                    smallRes[spot] = round(smallRes[spot]/smallRes[0], 2)
+                weights.loc[len(weights)] = smallRes
+    basesFinal = pandas.DataFrame(columns=['OUTS', '___', '1__', '_2_', '__3', '12_', '_23', '1_3', '123'])
+    for i in range(3):
+        basesFinal.loc[i] = [i, 0, 0, 0, 0, 0, 0, 0, 0]
+        for j in range(1, 9):
+            basesFinal.iloc[i, j] = round(bases.iloc[i, j] / basesAtt.iloc[i, j], 2)
+    basesFinal.set_index('OUTS', drop=True, inplace=True)
+    with pandas.ExcelWriter('weightedRuns.xlsx') as writer:
+        weights.to_excel(writer, sheet_name='PA Results')
+        basesFinal.to_excel(writer, sheet_name='Bases')
 
 
 def test(hScore, pScore):  # Sims a bunch of innings and returns a stat like ERA or OPS (currently ERA)

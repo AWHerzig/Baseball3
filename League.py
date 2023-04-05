@@ -584,25 +584,31 @@ def endOfYear(gp):
     NLp['ERA'] = [i.ERA for i in list(NLp['Name'])]
     NLp['W'] = [i.W for i in list(NLp['Name'])]
     NLp['S'] = [i.S for i in list(NLp['Name'])]
-    NLp['WHIP'] = [i.WHIP for i in list(NLp['Name'])]
     NLp['K%'] = [i.Kp for i in list(NLp['Name'])]
+    NLp['RA'] = [round(i.rAdded, 2) for i in list(NLp['Name'])]
+    NLp['wRA'] = [i.wRA for i in list(NLp['Name'])]
     ALp['IP'] = [i.IP for i in list(ALp['Name'])]
     ALp['ERA'] = [i.ERA for i in list(ALp['Name'])]
     ALp['W'] = [i.W for i in list(ALp['Name'])]
     ALp['S'] = [i.S for i in list(ALp['Name'])]
-    ALp['WHIP'] = [i.WHIP for i in list(ALp['Name'])]
     ALp['K%'] = [i.Kp for i in list(ALp['Name'])]
+    ALp['RA'] = [round(i.rAdded, 2) for i in list(ALp['Name'])]
+    ALp['wRA'] = [i.wRA for i in list(ALp['Name'])]
     # hitters
     NLh['PA'] = [i.PA for i in list(NLh['Name'])]
     NLh['HR'] = [i.HR for i in list(NLh['Name'])]
     NLh['OPS'] = [i.OPS for i in list(NLh['Name'])]
     NLh['SB'] = [i.SB for i in list(NLh['Name'])]
     NLh['SB%'] = [i.Sp for i in list(NLh['Name'])]
+    NLh['RA'] = [round(i.rAdded, 2) for i in list(NLh['Name'])]
+    NLh['wRC+'] = [i.wRCp for i in list(NLh['Name'])]
     ALh['PA'] = [i.PA for i in list(NLh['Name'])]
     ALh['HR'] = [i.HR for i in list(ALh['Name'])]
     ALh['OPS'] = [i.OPS for i in list(ALh['Name'])]
     ALh['SB'] = [i.SB for i in list(ALh['Name'])]
     ALh['SB%'] = [i.Sp for i in list(ALh['Name'])]
+    ALh['RA'] = [round(i.rAdded, 2) for i in list(ALh['Name'])]
+    ALh['wRC+'] = [i.wRCp for i in list(ALh['Name'])]
     print('End of year statistical leaders')
     print('Pitching-NL')
     NLp.sort_values(['IP'], inplace=True, ascending=False)
@@ -613,9 +619,11 @@ def endOfYear(gp):
     print(NLp.head())
     NLp.sort_values(['S'], inplace=True, ascending=False)
     print(NLp.head())
-    NLp.sort_values(['WHIP'], inplace=True, ascending=True)
-    print(NLp[NLp['IP'] >= gp].head())
     NLp.sort_values(['K%'], inplace=True, ascending=False)
+    print(NLp[NLp['IP'] >= gp].head())
+    NLp.sort_values(['RA'], inplace=True, ascending=False)
+    print(NLp.head())
+    NLp.sort_values(['wRA'], inplace=True, ascending=True)
     print(NLp[NLp['IP'] >= gp].head())
     print('Pitching-AL')
     ALp.sort_values(['IP'], inplace=True, ascending=False)
@@ -626,9 +634,11 @@ def endOfYear(gp):
     print(ALp.head())
     ALp.sort_values(['S'], inplace=True, ascending=False)
     print(ALp.head())
-    ALp.sort_values(['WHIP'], inplace=True, ascending=True)
-    print(ALp[ALp['IP'] >= gp].head())
     ALp.sort_values(['K%'], inplace=True, ascending=False)
+    print(ALp[ALp['IP'] >= gp].head())
+    ALp.sort_values(['RA'], inplace=True, ascending=False)
+    print(ALp.head())
+    ALp.sort_values(['wRA'], inplace=True, ascending=True)
     print(ALp[ALp['IP'] >= gp].head())
     print('Hitting-NL')
     NLh.sort_values(['OPS'], inplace=True, ascending=False)
@@ -637,6 +647,10 @@ def endOfYear(gp):
     print(NLh.head())
     NLh.sort_values(['SB'], inplace=True, ascending=False)
     print(NLh.head())
+    NLh.sort_values(['RA'], inplace=True, ascending=False)
+    print(NLh.head())
+    NLh.sort_values(['wRC+'], inplace=True, ascending=False)
+    print(NLh[NLh['PA'] >= 3*gp].head())
     print('Hitting-AL')
     ALh.sort_values(['OPS'], inplace=True, ascending=False)
     print(ALh[ALh['PA'] >= 3*gp].head())
@@ -644,8 +658,12 @@ def endOfYear(gp):
     print(ALh.head())
     ALh.sort_values(['SB'], inplace=True, ascending=False)
     print(ALh.head())
+    ALh.sort_values(['RA'], inplace=True, ascending=False)
+    print(ALh.head())
+    ALh.sort_values(['wRC+'], inplace=True, ascending=False)
+    print(ALh[ALh['PA'] >= 3*gp].head())
     for i in MLBt:
-        if i.controlled or i in NLEt:
+        if i.controlled:
             print('Your Team')
             for j in i.hitters['Name']:
                 print(j.bigLine())
@@ -653,6 +671,7 @@ def endOfYear(gp):
                 print(j.bigLine())
             for j in i.bullpen['Name']:
                 print(j.bigLine())
+    #gameplayEOY()
 
 
 def bracket(teams):  # Derpy as hell but I like how it looks this way

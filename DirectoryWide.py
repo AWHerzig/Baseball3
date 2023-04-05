@@ -181,8 +181,9 @@ SPstam = 75  # Gets added to/subtracted from based on game events, when 0 the P 
 RPstam = 15  # Starters go longer than relievers
 baseRunning = 20
 baseRange = 290
+leaguewideRC = .135
 faFormat = 2
-simYears = 1
+simYears = 5  # Aidan remember you need to have a sim year so player.team values get set
 # [X-Accel, Y-Accel, Z-Velo, Baseline X, Baseline Y] baselines will be adjusted by Pitcher.
 # This is for righties, lefties will flip Xs. Gravity gets added to Y-accel later
 # SUUUPER Tentative... becoming less tentative
@@ -227,5 +228,6 @@ stadiums = {'WSN': [337, 377, 402, 370, 335], 'PHI': [329, 391, 401, 369, 330], 
             'DET': [345, 370, 420, 365, 330], 'HOU': [315, 383, 409, 390, 326], 'LAA': [347, 390, 396, 367, 350],
             'OAK': [330, 388, 400, 388, 330], 'SEA': [331, 378, 401, 381, 326], 'TEX': [329, 372, 407, 374, 326],
             'NLA': [350, 400, 420, 400, 350], 'ALA': [350, 400, 420, 400, 350]}
+
 
 

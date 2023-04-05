@@ -56,11 +56,14 @@ class Pitcher:
         self.BB = 0
         self.HR = 0
         self.H = 0
+        self.rAdded = 0
+        self.wR = 0
         # calc Stats
         self.IP = 0
         self.ERA = 0
         self.WHIP = 0
         self.Kp = 0
+        self.wRA = 0
 
     def __str__(self):
         return self.name
@@ -72,6 +75,7 @@ class Pitcher:
         self.IP = round(self.OR / 3, 1)
         if self.IP > 0:
             self.ERA = round((self.ER * 9) / self.IP, 2)
+            self.wRA = round((self.wR * 9) / self.IP, 2)
             self.WHIP = round((self.H + self.BB) / self.IP, 2)
         if self.BF > 0:
             self.Kp = round(self.K / self.BF, 3)
@@ -85,7 +89,7 @@ class Pitcher:
     def bigLine(self):
         return f'{self.team} {self.pos}    {self.name} ({self.age};{self.cont},{self.velo},{self.move},{self.field},{self.speed}):' \
                f' {self.IP} IP, {self.record()}, {self.S} Saves, {round((self.S+self.Hold) / self.SO, 2) if self.SO > 0 else 0} S+H%, {self.ERA} ERA,' \
-               f' {self.WHIP} WHIP, {self.Kp} K%'
+               f' {self.WHIP} WHIP, {self.Kp} K%, {round(self.rAdded, 2)} RA, {self.wRA} wRA'
 
     def canGetThere(self, dist, time):
         return dist < (17 + .5 * self.speed) * max(time - 1.1 + (.05*self.field), 0) + (1 + .5*self.field)
@@ -105,8 +109,11 @@ class Pitcher:
         self.BB = 0
         self.HR = 0
         self.H = 0
+        self.rAdded = 0
+        self.wR = 0
         self.IP = 0
         self.ERA = 0
+        self.wRA = 0
         self.WHIP = 0
         self.Kp = 0
         self.age += 1
@@ -294,6 +301,8 @@ class Hitter:
         self.SF = 0
         self.zMissT = 0
         self.swings = 0
+        self.rAdded = 0
+        self.wR = 0
         # CalcStats
         self.AVG = 0
         self.OBP = 0
@@ -303,6 +312,7 @@ class Hitter:
         self.zMissA = 0
         self.slash = ''
         self.BABIP = 0
+        self.wRCp = 0
 
     def __str__(self):
         return self.name
@@ -310,6 +320,7 @@ class Hitter:
     def calcStats(self):
         if self.PA > 0:
             self.OBP = round((self.H + self.BB) / self.PA, 3)
+            self.wRCp = round(100 * ((self.wR / self.PA) / leaguewideRC), 1)
         if self.PA - self.BB - self.SF > 0:
             self.AVG = round(self.H / (self.PA - self.BB - self.SF), 3)
             self.SLG = round(self.TB / (self.PA - self.BB - self.SF), 3)
@@ -331,8 +342,7 @@ class Hitter:
 
     def bigLine(self):
         return f'{self.team} {self.pos}/{self.secondary} {self.name} ({self.age};{self.con},{self.pow},{self.vis},{self.field},{self.speed}):' \
-               f' {self.PA} PA, {self.slash}, {self.HR} HR, {self.SB}/{self.SB+self.CS} SB, {self.RBI} RBI, '
-
+               f' {self.PA} PA, {self.slash}, {self.HR} HR, {self.SB}/{self.SB+self.CS} SB, {self.RBI} RBI, {round(self.rAdded, 2)} RA, {self.wRCp} wRC+'
 
     def canGetThere(self, dist, time):
         if self.outOfPos:
@@ -355,10 +365,13 @@ class Hitter:
         self.SF = 0
         self.zMissT = 0
         self.swings = 0
+        self.rAdded = 0
+        self.wR = 0
         self.AVG = 0
         self.OBP = 0
         self.SLG = 0
         self.OPS = 0
+        self.wRCp = 0
         self.Sp = 0
         self.zMissA = 0
         self.slash = ''
