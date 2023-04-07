@@ -59,6 +59,7 @@ offP = 1  # print value for the offseason
 userStartup2(starter)
 if isinstance(starter, Team):
     holdovers = holdUpdate(cur)
+    year -= 1
     cur = offseason(year, offP, holdovers)
     year += 1
 while go:

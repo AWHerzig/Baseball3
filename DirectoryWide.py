@@ -182,8 +182,11 @@ RPstam = 15  # Starters go longer than relievers
 baseRunning = 20
 baseRange = 290
 leaguewideRC = .135
+# SETTINGS
 faFormat = 2
 simYears = 5  # Aidan remember you need to have a sim year so player.team values get set
+draftDepth = 4  # 0-4 inclusive (4 setting results in 15 round draft, still 3 SPs per team average)
+# END SETTINGS
 # [X-Accel, Y-Accel, Z-Velo, Baseline X, Baseline Y] baselines will be adjusted by Pitcher.
 # This is for righties, lefties will flip Xs. Gravity gets added to Y-accel later
 # SUUUPER Tentative... becoming less tentative

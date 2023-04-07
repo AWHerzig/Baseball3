@@ -5,7 +5,7 @@ from DirectoryWide import *
 import numpy
 from alive_progress import alive_bar, alive_it
 #"""
-schedLength = input('How many games per season would you like? (20, 52, 162, Alt)')  # 0 is 20, 1 and '' is 52, 2 is 162
+schedLength = input('How many games per season would you like? (20, 52, 162, Alt)')  # 1 and '' is 52, 2 is 162
 if schedLength == '':
     schedLength = '52'
 if schedLength == 'Alt':
@@ -757,10 +757,18 @@ def bracket(teams):  # Derpy as hell but I like how it looks this way
 def offseason(year, p, holdovers):
     freeAgents = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
     pDeals = 0
+    full = True if year <= simYears else False
     for i in NLt+ALt:
         teamFAs = i.reset()
         freeAgents = pandas.concat([freeAgents, teamFAs], ignore_index=True)
-        i.prospectsAvailable()
+        i.prospectsAvailable(full)
+        if not full and i.controlled:
+            i.needCheck()
+            print(*i.needs)
+    if not full:
+        prospectDraft(p)
+    for i in MLBt:
+        i.prospects.sort_values(['Value'], inplace=True, ascending=False, ignore_index=True)
     if faFormat == 1:  # EXCEL THING
         freeAgents = pandas.concat([freeAgents, holdovers])
         go = True
@@ -808,7 +816,7 @@ def offseason(year, p, holdovers):
     else:
         freeAgents.sort_values(['Core', 'OVR'], inplace=True, ignore_index=True, ascending=False)
         #with alive_bar(len(freeAgents), dual_line=True, title='FAs') as bar:
-        if year <= simYears:
+        if p == 0:
             for i in alive_it(range(len(freeAgents))):
                 if auctionHelperThing(freeAgents, i, p, year):
                     break
@@ -832,6 +840,43 @@ def offseason(year, p, holdovers):
     elif p > 0:
         print(len(freeAgents), 'have retired')
     return freeAgents[freeAgents['Age'] < 8]
+
+
+def prospectDraft(p):
+    draftOrder = pandas.DataFrame(columns=['Team', 'Previous Wins'])
+    for i in MLBt:
+        draftOrder.loc[len(draftOrder)] = [i, i.prevWins]
+    draftOrder.sort_values(['Previous Wins'], inplace=True, ignore_index=True, ascending=True)
+    print(draftOrder)
+    prospects = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
+    for i in range(30*draftDepth):
+        inf = Hitter(nameGen(), random.choice(infieldPos), hand=random.choice(hitterHand), top=8)
+        inf.age = 1
+        inf.secondary = random.choice(infieldPos)
+        prospects.loc[len(prospects)] = [inf, inf.pos, inf.secondary, 1, inf.offense, inf.overall, 0]
+    for i in range(30*draftDepth):
+        out = Hitter(nameGen(), random.choice(outfieldPos), hand=random.choice(hitterHand), top=8)
+        out.age = 1
+        out.secondary = random.choice(outfieldPos)
+        prospects.loc[len(prospects)] = [out, out.pos, out.secondary, 1, out.offense, out.overall, 0]
+    for i in range(30*min(draftDepth, 3)):
+        sp = Pitcher(nameGen(), 'SP', hand=random.choice(pitcherHand), top=8)
+        sp.age = 1
+        prospects.loc[len(prospects)] = [sp, 'SP', numpy.nan, 1, sp.overall, sp.total, 0]
+    for i in range(30*draftDepth):
+        rp = Pitcher(nameGen(), 'RP', hand=random.choice(pitcherHand), top=8)
+        rp.age = 1
+        prospects.loc[len(prospects)] = [rp, 'RP', numpy.nan, 1, rp.overall, rp.total, 0]
+    if p > 0:
+        print('Welcome to the Prospect Draft!!')
+    for i in range(min(4*draftDepth, 15)):
+        print(f'ROUND {i+1}')
+        for j in range(30):
+            team = draftOrder.loc[j, 'Team']
+            pick = team.prospectDrafter(prospects, )
+            prospects.drop(prospects[prospects['Name'] == pick].index, inplace=True)
+            if p > 0:
+                print(f'Pick {i+1}.{j+1}: {team.ABR} selects {pick.idLine()}')
 
 
 def auctionHelperThing(freeAgents, i, p, year):
@@ -881,7 +926,6 @@ def areWeDone():
         if len(i.hitters) < 13 or len(i.rotation) < 5 or len(i.bullpen) < 8:
             return False
     return True
-
 
 
 def holdUpdate(holdovers):

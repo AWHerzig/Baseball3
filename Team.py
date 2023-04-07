@@ -201,27 +201,87 @@ class Team:
         needs[3] = 8 - len(self.bullpen)
         self.needs = needs
 
-    def prospectsAvailable(self):
+    def prospectsAvailable(self, full):
+        dock = 0 if full else draftDepth
         self.prospects = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
-        for i in range(4):
+        for i in range(4-dock):
             inf = Hitter(nameGen(), random.choice(infieldPos), hand=random.choice(hitterHand), top=8)
             inf.age = 1
             inf.secondary = random.choice(infieldPos)
             self.prospects.loc[len(self.prospects)] = [inf, inf.pos, inf.secondary, 1, inf.offense, inf.overall, self.setValue(inf)]
-        for i in range(4):
+        for i in range(4-dock):
             out = Hitter(nameGen(), random.choice(outfieldPos), hand=random.choice(hitterHand), top=8)
             out.age = 1
             out.secondary = random.choice(outfieldPos)
             self.prospects.loc[len(self.prospects)] = [out, out.pos, out.secondary, 1, out.offense, out.overall, self.setValue(out)]
-        for i in range(3):
+        for i in range(3-dock):  # range(-1) is [] so we good.
             sp = Pitcher(nameGen(), 'SP', hand=random.choice(pitcherHand), top=8)
             sp.age = 1
             self.prospects.loc[len(self.prospects)] = [sp, 'SP', numpy.nan, 1, sp.overall, sp.total, self.setValue(sp)]
-        for i in range(4):
+        for i in range(4-dock):
             rp = Pitcher(nameGen(), 'RP', hand=random.choice(pitcherHand), top=8)
             rp.age = 1
             self.prospects.loc[len(self.prospects)] = [rp, 'RP', numpy.nan, 1, rp.overall, rp.total, self.setValue(rp)]
         self.prospects.sort_values(['Value'], inplace=True, ascending=False, ignore_index=True)
+
+    def prospectDrafter(self, prospects):
+        prospects['Value'] = [self.setValue(i) for i in prospects['Name']]
+        prospects.sort_values(['Value'], inplace=True, ascending=False, ignore_index=True)
+        if self.controlled:
+            prospects['Con(t)'] = [i.con if isinstance(i, Hitter) else i.cont for i in prospects['Name']]
+            prospects['Pow/Velo'] = [i.pow if isinstance(i, Hitter) else i.velo for i in prospects['Name']]
+            prospects['Vis/Move'] = [i.vis if isinstance(i, Hitter) else i.move for i in prospects['Name']]
+            prospects['Fielding'] = [i.field for i in prospects['Name']]
+            prospects['Speed'] = [i.speed for i in prospects['Name']]
+            prospects['Hand'] = [i.hand for i in prospects['Name']]
+            prospects['Arsenal'] = [i.arStr if isinstance(i, Pitcher) else 'N/A' for i in prospects['Name']]
+            # your players
+            hitters = self.hitters.copy()
+            rotation = self.rotation.copy()
+            bullpen = self.bullpen.copy()
+            hitters['Contact'] = [i.con for i in hitters['Name']]
+            hitters['Power'] = [i.pow for i in hitters['Name']]
+            hitters['Vision'] = [i.vis for i in hitters['Name']]
+            hitters['Fielding'] = [i.field for i in hitters['Name']]
+            hitters['Speed'] = [i.speed for i in hitters['Name']]
+            hitters['Age'] = [i.age for i in hitters['Name']]
+            hitters['Duration'] = [i.contract[0] for i in hitters['Name']]
+            hitters['Salary'] = [i.contract[1] for i in hitters['Name']]
+            rotation['Control'] = [i.cont for i in rotation['Name']]
+            rotation['Velocity'] = [i.velo for i in rotation['Name']]
+            rotation['Movement'] = [i.move for i in rotation['Name']]
+            rotation['Fielding'] = [i.field for i in rotation['Name']]
+            rotation['Speed'] = [i.speed for i in rotation['Name']]
+            rotation['Age'] = [i.age for i in rotation['Name']]
+            rotation['Duration'] = [i.contract[0] for i in rotation['Name']]
+            rotation['Salary'] = [i.contract[1] for i in rotation['Name']]
+            bullpen['Control'] = [i.cont for i in bullpen['Name']]
+            bullpen['Velocity'] = [i.velo for i in bullpen['Name']]
+            bullpen['Movement'] = [i.move for i in bullpen['Name']]
+            bullpen['Fielding'] = [i.field for i in bullpen['Name']]
+            bullpen['Speed'] = [i.speed for i in bullpen['Name']]
+            bullpen['Age'] = [i.age for i in bullpen['Name']]
+            bullpen['Duration'] = [i.contract[0] for i in bullpen['Name']]
+            bullpen['Salary'] = [i.contract[1] for i in bullpen['Name']]
+            with pandas.ExcelWriter('UserDraft.xlsx') as writer:
+                prospects.to_excel(writer, sheet_name='Available Prospects')
+                self.prospects.to_excel(writer, sheet_name='Signed Prospects')
+                hitters.to_excel(writer, sheet_name='Your Hitters')
+                rotation.to_excel(writer, sheet_name='Your Starters')
+                bullpen.to_excel(writer, sheet_name='Your Relievers')
+            choice = None
+            while choice is None:
+                try:
+                    choice = int(input('Enter key of prospect you wish to draft to your camp.'))
+                    if choice < 0 or choice >= len(prospects):
+                        raise ValueError
+                except ValueError:
+                    print('Bad Input')
+                    choice = None
+        else:
+            choice = 0
+        self.prospects.loc[len(prospects)] = prospects.loc[choice]
+        return prospects.loc[choice, 'Name']
 
     def matchProspect(self, player, pos1, pos2):
         if isinstance(player, Hitter):

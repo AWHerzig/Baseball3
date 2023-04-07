@@ -77,6 +77,7 @@ def userStartup2(player):
                     print('Bad input, set to 0')
                     choice = 0
                 player.values[i] = choice
+        dud = input('There is no prospect draft your first year bc nobody has wins from last year.')
 
 
 def buildAHitter():
