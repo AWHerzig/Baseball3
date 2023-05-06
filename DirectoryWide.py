@@ -181,7 +181,7 @@ SPstam = 75  # Gets added to/subtracted from based on game events, when 0 the P 
 RPstam = 15  # Starters go longer than relievers
 baseRunning = 20
 baseRange = 290
-leaguewideRC = .135
+leaguewideRC = .1246
 # SETTINGS
 faFormat = 2
 simYears = 5  # Aidan remember you need to have a sim year so player.team values get set

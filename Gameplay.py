@@ -17,15 +17,17 @@ import pandas
 # 4 Pitch-by-Pitch
 testerDF = pandas.DataFrame(columns=['CScore', 'Power', 'Result'])
 
-baseMatrix = pandas.DataFrame(numpy.array([[0, .66, 1.05, 1.24, 1.39, 1.68, 1.92, 1.72, 2.53],
-                                           [1, .35, .61, .73, .97, 1.09, 1.35, 1.16, 1.76],
-                                            [2, .13, .26, .31, .5, .51, .65, .6, .94],
+baseMatrix = pandas.DataFrame(numpy.array([[0, .59, .95, 1.14, 1.29, 1.53, 1.85, 1.63, 2.37],
+                                           [1, .32, .56, .67, .88, .99, 1.23, 1.07, 1.6],
+                                            [2, .12, .23, .3, .43, .47, .63, .57, .87],
                                            [3, 0, 0, 0, 0, 0, 0, 0, 0],
                                            [4, 0, 0, 0, 0, 0, 0, 0, 0]]),  # Just in case
                               columns=['OUTS', '', '1', '2', '3', '12', '23', '13', '123'])
 baseMatrix.set_index('OUTS', drop=True, inplace=True)
-wRuns = {'K': -.15, 'BB': .39, 'Home Run': 1.53, 'single': .47, 'double': .75, 'triple': 1.09, 'IPHR': 1.53, 'SF': -.15, 'out': -.15,
-           'FC': -.15, 'DP': -.15, 'LO': -.15, 'FO': -.15, 'GO': -.15, 'Pop Out': -.15, 'Foul Out': -.15}  #SF just not common enough
+outWeight = -.14
+wRuns = {'K': outWeight, 'BB': .39, 'Home Run': 1.56, 'single': .434, 'double': .71, 'triple': 1.07, 'IPHR': 1.56,
+         'SF': outWeight, 'out': outWeight, 'FC': outWeight, 'DP': outWeight, 'LO': outWeight, 'FO': outWeight,
+         'GO': outWeight, 'Pop Out': outWeight, 'Foul Out': outWeight}  #SF just not common enough
 
 # oLevel = input('Just hit enter for general (more readable) level 3+ output, enter anything for detailed')
 oLevel = ''
@@ -523,6 +525,12 @@ def pitch(pitcher, hitter, board, defense, steal, test3=False):  # This is the n
     (swing, xSwing, ySwing, zSwing, crossPlate, penalty) = swingyStuff(Ax, Px, Ay, Py, Az, Vz, Pz,
                                                                        pSpot, hitter, board, steal)
     # this is split off for HRD^
+    if board.p >= 4:
+        if oLevel:
+            print(pType, crossPlate)
+        else:
+            print(pType, crossPlate)
+            print(pType, locString(crossPlate, hitter.hand))
     if test3:
         zone = (-.875 <= crossPlate[0] <= .875) and (1.5 <= crossPlate[1] <= 3.5)
         if swing is None:
@@ -686,12 +694,6 @@ def swingyStuff(Ax, Px, Ay, Py, Az, Vz, Pz, pSpot, hitter, board, steal):
             zSwing = findP(Az, Vz, Pz, swingTime)
             hitter.zMissT += abs(zSwing)
     """
-    if board.p >= 4:
-        if oLevel:
-            print(pType, crossPlate)
-        else:
-            print(pType, crossPlate)
-            print(pType, locString(crossPlate, hitter.hand))
     return (swing, xSwing, ySwing, zSwing, crossPlate, penalty)
 
 

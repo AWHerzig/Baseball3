@@ -671,7 +671,8 @@ def endOfYear(gp):
                 print(j.bigLine())
             for j in i.bullpen['Name']:
                 print(j.bigLine())
-    #gameplayEOY()
+    if builder:
+        gameplayEOY()
 
 
 def bracket(teams):  # Derpy as hell but I like how it looks this way
@@ -837,9 +838,10 @@ def offseason(year, p, holdovers):
         i.lineupCard.closer = i.bullpen.iloc[0, 0]
     if p > 0 and faFormat == 1:
         print(len(freeAgents[freeAgents['Age'] >= 8]), 'have retired')
+        return freeAgents[freeAgents['Age'] < 8]
     elif p > 0:
         print(len(freeAgents), 'have retired')
-    return freeAgents[freeAgents['Age'] < 8]
+        return None
 
 
 def prospectDraft(p):
@@ -930,13 +932,14 @@ def areWeDone():
 
 def holdUpdate(holdovers):
     res = pandas.DataFrame(columns=['Name', 'Pos1', 'Pos2', 'Age', 'Core', 'OVR', 'Value'])
-    for i in holdovers['Name']:
-        i.age += 1
-        i.boost(ageCurve(i.age, i.controlled))
-        if isinstance(i, Hitter):
-            res.loc[len(res)] = [i, i.pos, i.secondary, i.age, i.offense, i.overall, 0]
-        else:
-            res.loc[len(res)] = [i, i.pos, i.secondary, i.age, i.overall, i.total, 0]
+    if holdovers is not None:
+        for i in holdovers['Name']:
+            i.age += 1
+            i.boost(ageCurve(i.age, i.controlled))
+            if isinstance(i, Hitter):
+                res.loc[len(res)] = [i, i.pos, i.secondary, i.age, i.offense, i.overall, 0]
+            else:
+                res.loc[len(res)] = [i, i.pos, i.secondary, i.age, i.overall, i.total, 0]
     return res
 
 
